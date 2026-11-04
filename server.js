@@ -8,17 +8,15 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 配置指定 URI（优先读取环境变量，默认回退至你的专属连接串）
+// 配置指定 URI（优先读取环境变量，默认回退至你的专属数据库）
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://aleafs%40aliyun.com:Xl32cVfKQ6SJ@120.55.50.18:27017/CorporateDB?authSource=admin';
 
 app.use(express.json());
 app.use(cookieParser());
 
-// --- 数据库模型（采用非常规字段名称） ---
+// --- 数据库模型（采用非常规字段命名：u_serial_identifier 与 p_cipher_digest） ---
 const UserSchema = new mongoose.Schema({
-  // 非常规账号字段：u_serial_identifier
   u_serial_identifier: { type: String, unique: true, required: true },
-  // 非常规密码字段：p_cipher_digest
   p_cipher_digest: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 }, { strict: false });
@@ -42,7 +40,7 @@ const StudyProgress = mongoose.model('StudyProgress', new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }).index({ userId: 1, courseName: 1 }, { unique: true }));
 
-// 连接数据库
+// 连接 MongoDB
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('[DB] Connected successfully to CorporateDB.'))
   .catch(err => console.error('[DB] Connection error:', err));
@@ -61,9 +59,9 @@ async function authMiddleware(req, res, next) {
   next();
 }
 
-// --- 鉴权接口 ---
+// --- 鉴权路由 ---
 
-// 1. 注册：持久化至 u_serial_identifier 与 p_cipher_digest
+// 1. 用户注册
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -71,7 +69,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: '用户名与密码必填，且密码长度需不少于 6 位' });
     }
 
-    // 检查是否存在同名账号（兼容老字段与新字段）
     const exists = await User.findOne({
       $or: [
         { u_serial_identifier: username },
@@ -103,7 +100,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 2. 登录：比对非常规字段
+// 2. 用户登录
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -111,7 +108,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: '请填写完整的用户名和密码' });
     }
 
-    // 检索非常规字段 u_serial_identifier，同时回退匹配历史 username
     const user = await User.findOne({
       $or: [
         { u_serial_identifier: username },
@@ -123,7 +119,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: '用户不存在' });
     }
 
-    // 读取非常规密码字段 p_cipher_digest，同时回退兼容常用命名
     const secretHash = user.p_cipher_digest || user.password || user.passwordHash || user.pwd;
     if (!secretHash) {
       return res.status(500).json({ error: '未在该记录中找到对应的凭证密文' });
@@ -156,6 +151,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// 3. 用户登出
 app.post('/api/auth/logout', async (req, res) => {
   if (req.cookies.sessionId) {
     await Session.deleteOne({ sessionId: req.cookies.sessionId });
@@ -164,42 +160,72 @@ app.post('/api/auth/logout', async (req, res) => {
   res.json({ success: true });
 });
 
+// 4. 当前登录态校验
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const name = req.user.u_serial_identifier || req.user.username;
   res.json({ authenticated: true, username: name });
 });
 
-// --- 列表与详情代理 ---
+// --- 业务接口：抓取课程列表并逐行解析 ---
 app.get('/api/courses', authMiddleware, async (req, res) => {
   try {
-    const r = await fetch('https://studyindex-cg1.pages.dev/list.txt');
-    const text = await r.text();
-    const regex = /NAME\s*=\s*["“”](.*?)["“”]\s*,\s*BELONG_TO\s*=\s*["“”](.*?)["“”]\s*,\s*URL\s*=\s*["“”](.*?)["“”]/g;
-    const courses = [];
-    let m;
-    while ((m = regex.exec(text)) !== null) {
-      courses.push({ name: m[1].trim(), belongTo: m[2].trim(), url: m[3].trim() });
+    const targetUrl = 'https://studyindex-cg1.pages.dev/list.txt';
+    const response = await fetch(targetUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP 状态异常: ${response.status}`);
     }
+    const rawText = await response.text();
+
+    // 逐行切割并解析，容错混合引号（如 NAME="...“ 等）
+    const lines = rawText.split(/\r?\n/);
+    const courses = [];
+    const quotePattern = `["'“”]`;
+    const nameRegex = new RegExp(`NAME\\s*=\\s*${quotePattern}(.*?)${quotePattern}`, 'i');
+    const belongRegex = new RegExp(`BELONG_TO\\s*=\\s*${quotePattern}(.*?)${quotePattern}`, 'i');
+    const urlRegex = new RegExp(`URL\\s*=\\s*${quotePattern}(.*?)${quotePattern}`, 'i');
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      const nameMatch = line.match(nameRegex);
+      const belongMatch = line.match(belongRegex);
+      const urlMatch = line.match(urlRegex);
+
+      if (nameMatch && urlMatch) {
+        courses.push({
+          name: nameMatch[1].trim(),
+          belongTo: belongMatch ? belongMatch[1].trim() : '未分类',
+          url: urlMatch[1].trim()
+        });
+      }
+    }
+
     res.json({ courses });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('[Fetch Courses Error]', e);
+    res.status(500).json({ error: '获取课程列表失败: ' + e.message });
   }
 });
 
+// --- 业务接口：代理课程 JSON 内容（防跨域与 GitHub Raw 转换） ---
 app.get('/api/course-content', authMiddleware, async (req, res) => {
   try {
     let target = req.query.url;
+    if (!target) return res.status(400).json({ error: '缺少 URL 参数' });
+
     if (target.includes('github.com') && target.includes('/blob/')) {
       target = target.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
     }
     const r = await fetch(target);
+    if (!r.ok) throw new Error(`Fetch failed with status ${r.status}`);
     res.json(await r.json());
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: '获取课程内容失败: ' + e.message });
   }
 });
 
-// --- 进度存取 ---
+// --- 业务接口：每日概况与本周成果 ---
 app.get('/api/progress/summary', authMiddleware, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -218,6 +244,7 @@ app.get('/api/progress/summary', authMiddleware, async (req, res) => {
   }
 });
 
+// --- 业务接口：更新章节与答题状态 ---
 app.post('/api/progress/update', authMiddleware, async (req, res) => {
   try {
     const { courseName, belongTo, courseUrl, chapterIndex, quizResult } = req.body;
@@ -255,7 +282,7 @@ app.post('/api/progress/update', authMiddleware, async (req, res) => {
   }
 });
 
-// --- 前端 Web UI ---
+// --- 前端 Web UI（内置 Glassmorphism 样式，安全转义字符） ---
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="zh-CN">
@@ -267,7 +294,7 @@ app.get('/', (req, res) => {
   <style>
     :root { --bg: #0c0f14; --card: rgba(26,32,44,0.65); --border: rgba(255,255,255,0.1); --blue: #3b82f6; --text: #f3f4f6; --sub: #9ca3af; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Google Sans', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+    body { background: var(--bg); color: var(--text); font-family: 'Google Sans', -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
     header { backdrop-filter: blur(20px); background: rgba(12,15,20,0.7); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; position: sticky; top: 0; z-index: 50; }
     main { flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; padding: 32px 24px; }
     .glass { background: var(--card); backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
@@ -445,7 +472,7 @@ app.get('/', (req, res) => {
         chIdx = next;
         renderCh();
       } else if (next >= courseData.chapters.length) {
-        alert('恭喜完成本科目！');
+        alert('🎉 恭喜完成本科目全部章节！');
         exitStudy();
       }
     }
