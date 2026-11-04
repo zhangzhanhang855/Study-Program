@@ -7,16 +7,19 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 配置指定 URI（优先读取环境变量，默认回退至你的专属连接串）
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://aleafs%40aliyun.com:Xl32cVfKQ6SJ@120.55.50.18:27017/CorporateDB?authSource=admin';
 
 app.use(express.json());
 app.use(cookieParser());
 
-// --- 数据库模型 ---
-// 将字段正式统一为 username 与 password，开启 strict: false 兼容老字段
+// --- 数据库模型（采用非常规字段名称） ---
 const UserSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
+  // 非常规账号字段：u_serial_identifier
+  u_serial_identifier: { type: String, unique: true, required: true },
+  // 非常规密码字段：p_cipher_digest
+  p_cipher_digest: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 }, { strict: false });
 
@@ -39,6 +42,7 @@ const StudyProgress = mongoose.model('StudyProgress', new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }).index({ userId: 1, courseName: 1 }, { unique: true }));
 
+// 连接数据库
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('[DB] Connected successfully to CorporateDB.'))
   .catch(err => console.error('[DB] Connection error:', err));
@@ -47,7 +51,7 @@ mongoose.connect(MONGODB_URI)
 async function authMiddleware(req, res, next) {
   const sessionId = req.cookies.sessionId;
   if (!sessionId) return res.status(401).json({ error: '未登录' });
-  
+
   const session = await Session.findOne({ sessionId }).populate('userId');
   if (!session || !session.userId) {
     res.clearCookie('sessionId');
@@ -57,38 +61,49 @@ async function authMiddleware(req, res, next) {
   next();
 }
 
-// --- 鉴权路由 ---
-// 1. 注册：以 password 字段名存入密文
+// --- 鉴权接口 ---
+
+// 1. 注册：持久化至 u_serial_identifier 与 p_cipher_digest
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password || password.length < 6) {
       return res.status(400).json({ error: '用户名与密码必填，且密码长度需不少于 6 位' });
     }
-    
-    if (await User.findOne({ username })) {
-      return res.status(400).json({ error: '该用户名已存在' });
+
+    // 检查是否存在同名账号（兼容老字段与新字段）
+    const exists = await User.findOne({
+      $or: [
+        { u_serial_identifier: username },
+        { username: username }
+      ]
+    });
+    if (exists) {
+      return res.status(400).json({ error: '该用户已被注册' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, password: hashedPassword });
+    const hashedSecret = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      u_serial_identifier: username,
+      p_cipher_digest: hashedSecret
+    });
 
     const sessionId = crypto.randomUUID();
-    await Session.create({ sessionId, userId: user._id });
+    await Session.create({ sessionId, userId: newUser._id });
 
     res.cookie('sessionId', sessionId, {
       httpOnly: true,
       sameSite: 'lax',
       maxAge: 7 * 86400 * 1000
     });
-    
-    res.json({ success: true, username: user.username });
+
+    res.json({ success: true, username });
   } catch (e) {
     res.status(500).json({ error: '注册失败: ' + e.message });
   }
 });
 
-// 2. 登录：平滑兼容 password、passwordHash 及明文
+// 2. 登录：比对非常规字段
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -96,24 +111,29 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: '请填写完整的用户名和密码' });
     }
 
-    const user = await User.findOne({ username });
+    // 检索非常规字段 u_serial_identifier，同时回退匹配历史 username
+    const user = await User.findOne({
+      $or: [
+        { u_serial_identifier: username },
+        { username: username }
+      ]
+    });
+
     if (!user) {
       return res.status(401).json({ error: '用户不存在' });
     }
 
-    // 兼容取值：优先读取 password，备选读取历史字段 passwordHash 或 pwd
-    const storedSecret = user.password || user.passwordHash || user.pwd;
-    if (!storedSecret) {
-      return res.status(500).json({ error: '此账号尚未录入有效密码字段，请重新注册' });
+    // 读取非常规密码字段 p_cipher_digest，同时回退兼容常用命名
+    const secretHash = user.p_cipher_digest || user.password || user.passwordHash || user.pwd;
+    if (!secretHash) {
+      return res.status(500).json({ error: '未在该记录中找到对应的凭证密文' });
     }
 
     let isMatch = false;
     try {
-      // 尝试按 bcrypt 哈希算法进行比对
-      isMatch = await bcrypt.compare(password, storedSecret);
+      isMatch = await bcrypt.compare(password, secretHash);
     } catch (bcryptErr) {
-      // 容错：如果数据库历史录入的是纯明文密码，做兜底匹配
-      isMatch = (password === storedSecret);
+      isMatch = (password === secretHash);
     }
 
     if (!isMatch) {
@@ -129,7 +149,8 @@ app.post('/api/auth/login', async (req, res) => {
       maxAge: 7 * 86400 * 1000
     });
 
-    res.json({ success: true, username: user.username });
+    const displayName = user.u_serial_identifier || user.username;
+    res.json({ success: true, username: displayName });
   } catch (e) {
     res.status(500).json({ error: '登录处理异常: ' + e.message });
   }
@@ -144,13 +165,14 @@ app.post('/api/auth/logout', async (req, res) => {
 });
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
-  res.json({ authenticated: true, username: req.user.username });
+  const name = req.user.u_serial_identifier || req.user.username;
+  res.json({ authenticated: true, username: name });
 });
 
-// --- 列表与内容代理 ---
+// --- 列表与详情代理 ---
 app.get('/api/courses', authMiddleware, async (req, res) => {
   try {
-    const r = await fetch('https://studyindex-cg1.pages.dev/list.txt');
+    const r = await fetch('https://studyindex.pages.dev/list.txt');
     const text = await r.text();
     const regex = /NAME\s*=\s*["“”](.*?)["“”]\s*,\s*BELONG_TO\s*=\s*["“”](.*?)["“”]\s*,\s*URL\s*=\s*["“”](.*?)["“”]/g;
     const courses = [];
@@ -177,7 +199,7 @@ app.get('/api/course-content', authMiddleware, async (req, res) => {
   }
 });
 
-// --- 学习进度存取 ---
+// --- 进度存取 ---
 app.get('/api/progress/summary', authMiddleware, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -185,7 +207,7 @@ app.get('/api/progress/summary', authMiddleware, async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000);
     const weeklyRecords = await StudyProgress.find({ userId, updatedAt: { $gte: sevenDaysAgo } }).sort({ updatedAt: -1 });
     const all = await StudyProgress.find({ userId });
-    
+
     res.json({
       lastProgress,
       weeklyRecords,
@@ -200,7 +222,7 @@ app.post('/api/progress/update', authMiddleware, async (req, res) => {
   try {
     const { courseName, belongTo, courseUrl, chapterIndex, quizResult } = req.body;
     let p = await StudyProgress.findOne({ userId: req.user._id, courseName });
-    
+
     if (!p) {
       p = new StudyProgress({
         userId: req.user._id,
@@ -233,7 +255,7 @@ app.post('/api/progress/update', authMiddleware, async (req, res) => {
   }
 });
 
-// --- 前端静态托管 ---
+// --- 前端 Web UI ---
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="zh-CN">
