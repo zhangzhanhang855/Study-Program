@@ -4,35 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JR AI 智能研学中枢</title>
-  <!-- 引入 Google Sans & Noto Serif SC 衬线字体 -->
+  
+  <!-- 字体 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX 数学公式渲染库 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
   <style>
     :root {
-      --bg-dark: #0c0f14;
-      --card-bg: rgba(26, 32, 44, 0.65);
-      --card-border: rgba(255, 255, 255, 0.1);
+      --bg: #0b0f17;
+      --card-bg: rgba(22, 28, 41, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
       --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.35);
-      --accent-green: #10b981;
-      --text-main: #f3f4f6;
-      --text-sub: #9ca3af;
-      --font-code: "SF Mono", "Fira Code", monospace;
+      --accent-glow: rgba(59, 130, 246, 0.3);
+      --accent-purple: #8b5cf6;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-font-smoothing: antialiased;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
     body {
-      background-color: var(--bg-dark);
+      background-color: var(--bg);
       background-image: 
-        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 40%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 40%);
       color: var(--text-main);
       font-family: 'Google Sans', 'Noto Serif SC', -apple-system, sans-serif;
       min-height: 100vh;
@@ -40,10 +43,9 @@
       flex-direction: column;
     }
 
-    /* 顶栏 */
     header {
       backdrop-filter: blur(20px);
-      background: rgba(12, 15, 20, 0.7);
+      background: rgba(11, 15, 23, 0.8);
       border-bottom: 1px solid var(--card-border);
       position: sticky;
       top: 0;
@@ -55,439 +57,323 @@
     }
 
     .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
       font-size: 1.15rem;
-      letter-spacing: -0.02em;
-    }
-
-    .brand-tag {
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      color: #fff;
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-family: var(--font-code);
-    }
-
-    .user-profile {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 0.9rem;
-    }
-
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--card-border);
-      color: var(--text-sub);
-      padding: 6px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-ghost:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    /* 主容器 */
-    main {
-      flex: 1;
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    /* 模态框与登录窗 */
-    .auth-overlay {
-      position: fixed;
-      inset: 0;
-      backdrop-filter: blur(25px);
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 20px;
-    }
-
-    .glass-box {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 36px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-
-    .auth-card {
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .auth-card h2 {
-      font-size: 1.5rem;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .auth-card p {
-      color: var(--text-sub);
-      font-size: 0.85rem;
-      margin-bottom: 24px;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-      text-align: left;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--text-sub);
-      margin-bottom: 6px;
-    }
-
-    .input-glass {
-      width: 100%;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      color: #fff;
-      font-size: 0.95rem;
-      outline: none;
-      transition: all 0.2s;
-    }
-
-    .input-glass:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
-    }
-
-    .btn-primary {
-      width: 100%;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      box-shadow: 0 4px 14px var(--accent-glow);
-    }
-
-    .btn-primary:active {
-      transform: scale(0.98);
-    }
-
-    /* 每日看板 */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 24px;
-      margin-bottom: 40px;
-    }
-
-    @media (max-width: 860px) {
-      .dashboard-grid { grid-template-columns: 1fr; }
-    }
-
-    .overview-card {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .overview-card h3 {
-      font-size: 1.2rem;
-      margin-bottom: 16px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .resume-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .tag-module {
-      font-size: 0.75rem;
-      color: #60a5fa;
-      background: rgba(59, 130, 246, 0.15);
-      padding: 3px 10px;
-      border-radius: 12px;
-      display: inline-block;
-      margin-bottom: 6px;
-    }
-
-    /* 课程分类库 */
-    .section-title {
-      font-size: 1.3rem;
-      margin-bottom: 20px;
+    .badge-hub {
+      background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
       font-weight: 600;
     }
 
-    .module-group {
-      margin-bottom: 32px;
+    main {
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 20px;
     }
 
-    .module-header {
-      font-size: 1rem;
+    .glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn:hover { box-shadow: 0 4px 16px var(--accent-glow); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--card-border);
       color: var(--text-sub);
-      margin-bottom: 14px;
-      border-left: 3px solid var(--accent);
-      padding-left: 10px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.2s;
     }
+    .btn-ghost:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.2); }
 
-    .course-cards {
+    /* 课程卡片 */
+    .card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 18px;
+      margin-top: 16px;
     }
-
-    .course-card {
+    .course-item {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 20px;
       cursor: pointer;
-      transition: all 0.25s ease;
+      transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .course-item:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.4);
     }
 
-    .course-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+    /* 正文排版与丰富组件扩展 */
+    .content-body {
+      line-height: 1.8;
+      font-size: 1.05rem;
+      color: #e2e8f0;
+      margin-top: 20px;
+    }
+    .content-body p { margin-bottom: 16px; }
+    .content-body code {
+      font-family: var(--font-mono);
+      background: rgba(255,255,255,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #93c5fd;
+      font-size: 0.9em;
     }
 
-    /* 学习交互工作区 */
-    #studyView {
-      display: none;
-    }
-
-    .lesson-container {
-      background: var(--card-bg);
+    /* 表格组件样式增强 */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 24px 0;
       border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 32px;
-      margin-top: 16px;
-    }
-
-    .quiz-card {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      color: #94a3b8;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* 几何与坐标系动态交互沙盒 */
+    .geo-sandbox {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
       padding: 20px;
-      margin-top: 24px;
+      margin: 28px 0;
+    }
+    .geo-sandbox-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .geo-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 380px;
+      background: #070a0f;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .matrix-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+      background: rgba(0,0,0,0.3);
+      padding: 16px;
+      border-radius: 10px;
+    }
+    .matrix-slider {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+    }
+    .matrix-slider input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
     }
 
-    .quiz-option {
-      background: rgba(255, 255, 255, 0.03);
+    .preset-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--card-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .chip:hover { background: rgba(59, 130, 246, 0.2); border-color: var(--accent); }
+
+    /* 测验模块 */
+    .quiz-card {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 28px;
+    }
+    .quiz-opt {
+      background: rgba(255,255,255,0.03);
       border: 1px solid var(--card-border);
       padding: 12px 16px;
-      border-radius: 8px;
+      border-radius: 10px;
       margin-top: 10px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: 0.2s;
     }
-
-    .quiz-option:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    .quiz-option.selected {
+    .quiz-opt:hover { background: rgba(255,255,255,0.06); }
+    .quiz-opt.selected {
       border-color: var(--accent);
-      background: rgba(59, 130, 246, 0.15);
+      background: rgba(59, 130, 246, 0.18);
     }
 
-    .progress-bar-wrap {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-      overflow: hidden;
-      margin: 16px 0;
+    /* 登录弹窗 */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
     }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--accent);
-      width: 0%;
-      transition: width 0.3s ease;
+    .input {
+      width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--card-border);
+      border-radius: 8px; padding: 12px; color: #fff; margin-bottom: 14px; outline: none;
     }
+    .input:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
 
-  <!-- 顶栏 -->
   <header>
     <div class="brand">
-      <span>JR AI 学研终端</span>
-      <span class="brand-tag">v2.0</span>
+      <span>JR AI 研学中枢</span>
+      <span class="badge-hub">PRO-VISION</span>
     </div>
-    <div class="user-profile" id="userBar">
-      <span id="userNameDisplay">检测状态中...</span>
-      <button class="btn-ghost" id="logoutBtn" style="display:none;" onclick="logout()">登出</button>
+    <div>
+      <span id="userNameDisplay" style="color:var(--text-sub); font-size:0.9rem;">校验中...</span>
+      <button class="btn-ghost" id="logoutBtn" style="display:none; margin-left:12px;" onclick="logout()">登出</button>
     </div>
   </header>
 
-  <!-- 登录 / 注册 浮层（如果未登录强制弹出） -->
-  <div class="auth-overlay" id="authModal" style="display:none;">
-    <div class="glass-box auth-card">
-      <h2 id="authTitle">访问凭证验证</h2>
-      <p id="authSubtitle">输入账号并颁发端侧安全 Session Cookie</p>
-      
-      <div class="form-group">
-        <label>学员代号</label>
-        <input type="text" id="username" class="input-glass" placeholder="例如：zhangzh" />
-      </div>
-      <div class="form-group">
-        <label>访问密钥</label>
-        <input type="password" id="password" class="input-glass" placeholder="••••••••" />
-      </div>
-
-      <button class="btn-primary" id="authSubmitBtn" onclick="handleAuthSubmit()">建立安全会话</button>
-      <div style="margin-top: 16px; font-size: 0.85rem;">
-        <a href="javascript:void(0)" id="toggleAuthMode" style="color:var(--accent); text-decoration:none;" onclick="toggleAuthMode()">新学员？注册并接入</a>
+  <!-- 登录/注册浮层 -->
+  <div class="overlay" id="authModal" style="display:none;">
+    <div class="glass" style="max-width:380px; width:100%;">
+      <h3 id="authTitle" style="margin-bottom:8px;">访问会话验证</h3>
+      <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:20px;">基于安全 Session 机制建立端云同步</p>
+      <input type="text" id="username" class="input" placeholder="输入学员识别标识" />
+      <input type="password" id="password" class="input" placeholder="访问安全密钥" />
+      <button class="btn" style="width:100%;" onclick="submitAuth()">接入终端</button>
+      <div style="margin-top:14px; text-align:center;">
+        <a href="javascript:void(0)" onclick="toggleReg()" style="color:var(--accent); font-size:0.85rem; text-decoration:none;" id="regToggleText">新学员？注册账号</a>
       </div>
     </div>
   </div>
 
-  <!-- 核心视窗 -->
-  <main>
-    <!-- 1. 仪表盘与大纲 (Portal View) -->
-    <div id="portalView">
-      <div class="dashboard-grid">
-        <!-- 每日概况 & 继续上次 -->
-        <div class="glass-box overview-card">
-          <h3>📌 每日概况</h3>
-          <div id="continueStudyCard">
-            <p style="color:var(--text-sub);">暂无未完成的项目，请在下方探索新课程。</p>
-          </div>
-        </div>
-
-        <!-- 本周成果 -->
-        <div class="glass-box overview-card">
-          <h3>📈 本周成果</h3>
-          <div id="weeklyStatsBox">
-            <p style="color:var(--text-sub);">正在同步本周节点活动...</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 动态学习库 -->
-      <h2 class="section-title">课程图谱</h2>
-      <div id="courseContainer">正在从 studyindex.pages.dev 拉取索引...</div>
+  <!-- 大纲门户视图 -->
+  <main id="portal">
+    <div class="glass" style="margin-bottom:24px;">
+      <h3 style="margin-bottom:12px;">📌 每日概况</h3>
+      <div id="resumeBox" style="color:var(--text-sub);">正在同步云端档案...</div>
     </div>
 
-    <!-- 2. 交互学习视窗 (Study View) -->
-    <div id="studyView">
-      <button class="btn-ghost" onclick="exitStudyView()" style="margin-bottom:16px;">← 返回知识库概览</button>
-      <div class="lesson-container">
-        <span class="tag-module" id="studyBelongTo">归属模块</span>
-        <h1 id="studyCourseTitle" style="margin: 8px 0;">课程名称</h1>
-        <div class="progress-bar-wrap">
-          <div class="progress-fill" id="courseProgressFill"></div>
-        </div>
+    <h3 style="margin-top:32px;">学科图谱</h3>
+    <div id="courseList" class="card-grid"></div>
+  </main>
 
-        <div style="display:flex; justify-content:space-between; margin-bottom: 24px; color:var(--text-sub); font-size:0.9rem;">
-          <span id="chapterTitle">章节加载中...</span>
-          <span id="chapterIndexBadge">第 1 章</span>
-        </div>
+  <!-- 学习与交互工作台 -->
+  <main id="study" style="display:none;">
+    <button class="btn-ghost" onclick="exitStudy()" style="margin-bottom:16px;">← 返回目录</button>
+    <div class="glass">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span id="studyBelong" style="font-size:0.8rem; color:#60a5fa; background:rgba(59,130,246,0.15); padding:3px 10px; border-radius:6px;"></span>
+        <span id="chapterIndex" style="color:var(--text-sub); font-size:0.9rem; font-family:var(--font-mono);"></span>
+      </div>
+      <h2 id="studyTitle" style="margin-top:10px;"></h2>
 
-        <!-- 交互内容呈现 -->
-        <div id="studyContentArea" style="line-height: 1.7; font-size: 1.05rem; margin-bottom: 24px;"></div>
+      <!-- 动态交互几何沙盒容器（若章节配置则激活） -->
+      <div id="interactiveSandboxArea"></div>
 
-        <!-- 动态答题卡片 -->
-        <div id="quizContainer"></div>
+      <!-- 正文内容（支持表格、KaTeX 公式） -->
+      <div id="studyContent" class="content-body"></div>
 
-        <div style="display:flex; justify-content: space-between; margin-top: 32px;">
-          <button class="btn-ghost" id="prevChapterBtn" onclick="navChapter(-1)">上一节</button>
-          <button class="btn-primary" style="width: auto; padding: 10px 24px;" id="nextChapterBtn" onclick="navChapter(1)">下一节并同步</button>
-        </div>
+      <!-- 随堂单测 -->
+      <div id="quizArea"></div>
+
+      <div style="margin-top:32px; display:flex; justify-content:space-between;">
+        <button class="btn-ghost" id="prevBtn" onclick="moveChapter(-1)">上一节</button>
+        <button class="btn" id="nextBtn" onclick="moveChapter(1)">完成本节并同步</button>
       </div>
     </div>
   </main>
 
   <script>
-    let isRegisterMode = false;
-    let currentUser = null;
-    let activeCourse = null;
-    let activeLessonData = null;
-    let currentChapterIdx = 0;
-    let selectedAnswer = null;
+    let isReg = false, activeCourse = null, courseData = null, chIdx = 0, curAns = null;
+    let canvasAnimId = null;
 
-    // --- 初始化检查 ---
-    window.addEventListener('DOMContentLoaded', async () => {
-      await checkAuth();
-    });
+    window.onload = checkAuth;
 
     async function checkAuth() {
       try {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
-          const data = await res.json();
-          currentUser = data.username;
-          document.getElementById('userNameDisplay').innerText = `学员: ${currentUser}`;
+          const d = await res.json();
+          document.getElementById('userNameDisplay').innerText = '学员: ' + d.username;
           document.getElementById('logoutBtn').style.display = 'inline-block';
           document.getElementById('authModal').style.display = 'none';
-          loadDashboardAndCourses();
+          initDashboard();
         } else {
-          showAuthModal();
+          document.getElementById('authModal').style.display = 'flex';
         }
-      } catch (e) {
-        showAuthModal();
-      }
+      } catch(e) { document.getElementById('authModal').style.display = 'flex'; }
     }
 
-    function showAuthModal() {
-      document.getElementById('userNameDisplay').innerText = '未接入';
-      document.getElementById('logoutBtn').style.display = 'none';
-      document.getElementById('authModal').style.display = 'flex';
+    function toggleReg() {
+      isReg = !isReg;
+      document.getElementById('authTitle').innerText = isReg ? '注册新学员节点' : '访问会话验证';
+      document.getElementById('regToggleText').innerText = isReg ? '已有账号？去登录' : '新学员？注册账号';
     }
 
-    function toggleAuthMode() {
-      isRegisterMode = !isRegisterMode;
-      document.getElementById('authTitle').innerText = isRegisterMode ? '注册并接入' : '访问凭证验证';
-      document.getElementById('authSubtitle').innerText = isRegisterMode ? '创建新的学习节点并在安全环境中存储凭证' : '输入账号并颁发端侧安全 Session Cookie';
-      document.getElementById('authSubmitBtn').innerText = isRegisterMode ? '立即注册' : '建立安全会话';
-      document.getElementById('toggleAuthMode').innerText = isRegisterMode ? '已有账号？登入会话' : '新学员？注册并接入';
-    }
-
-    async function handleAuthSubmit() {
+    async function submitAuth() {
       const u = document.getElementById('username').value.trim();
       const p = document.getElementById('password').value.trim();
-      if (!u || !p) return alert('请填写用户名与密码');
-
-      const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, password: p })
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        location.reload();
-      } else {
-        alert(data.error || '验证失败');
-      }
+      const ep = isReg ? '/api/auth/register' : '/api/auth/login';
+      const r = await fetch(ep, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: u, password: p }) });
+      if (r.ok) location.reload();
+      else alert((await r.json()).error);
     }
 
     async function logout() {
@@ -495,201 +381,319 @@
       location.reload();
     }
 
-    // --- 加载大纲与概况 ---
-    async function loadDashboardAndCourses() {
-      // 1. 获取每日概况与统计
-      const sumRes = await fetch('/api/progress/summary');
-      const sumData = await sumRes.json();
+    async function initDashboard() {
+      const [sumRes, curRes] = await Promise.all([fetch('/api/progress/summary'), fetch('/api/courses')]);
+      const { lastProgress } = await sumRes.json();
+      const { courses } = await curRes.json();
 
-      // 渲染继续上次学习
-      const contBox = document.getElementById('continueStudyCard');
-      if (sumData.lastProgress) {
-        const lp = sumData.lastProgress;
-        contBox.innerHTML = `
-          <div class="resume-box">
-            <div>
-              <span class="tag-module">${lp.belongTo}</span>
-              <h4 style="margin:4px 0 6px 0; font-size:1.1rem;">${lp.courseName}</h4>
-              <p style="font-size:0.85rem; color:var(--text-sub);">
-                上次定位在第 ${lp.lastChapterIndex + 1} 节 · 更新于 ${new Date(lp.updatedAt).toLocaleDateString()}
-              </p>
-            </div>
-            <button class="btn-primary" style="width:auto; padding:8px 16px;" onclick="resumeCourse('${encodeURIComponent(JSON.stringify(lp))}')">继续学习</button>
-          </div>
-        `;
-      }
+      document.getElementById('resumeBox').innerHTML = lastProgress
+        ? '上次学到 <strong>' + lastProgress.courseName + '</strong>（第 ' + (lastProgress.lastChapterIndex + 1) + ' 节）'
+        : '暂无进行中的科目，请在下方点击开启。';
 
-      // 渲染本周成果
-      const weeklyBox = document.getElementById('weeklyStatsBox');
-      if (sumData.weeklyRecords && sumData.weeklyRecords.length > 0) {
-        weeklyBox.innerHTML = `
-          <p style="margin-bottom:8px; font-size:0.95rem;">本周活跃研读科目：<strong>${sumData.weeklyRecords.length} 门</strong></p>
-          <ul style="padding-left:18px; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
-            ${sumData.weeklyRecords.slice(0, 3).map(r => `<li>${r.courseName} (已解锁 ${r.completedChapters.length} 节)</li>`).join('')}
-          </ul>
-        `;
-      } else {
-        weeklyBox.innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">本周尚无研学归档，开启你的第一个里程碑吧！</p>`;
-      }
-
-      // 2. 获取并渲染课程列表
-      const courseRes = await fetch('/api/courses');
-      const { courses } = await courseRes.json();
-
-      const container = document.getElementById('courseContainer');
-      container.innerHTML = '';
-
-      // 按模块 BELONG_TO 分组
-      const modules = {};
+      const wrap = document.getElementById('courseList');
+      wrap.innerHTML = '';
       courses.forEach(c => {
-        if (!modules[c.belongTo]) modules[c.belongTo] = [];
-        modules[c.belongTo].push(c);
+        const d = document.createElement('div');
+        d.className = 'course-item';
+        d.innerHTML = '<span style="font-size:0.75rem; color:#60a5fa;">' + c.belongTo + '</span><h4 style="margin-top:6px;">' + c.name + '</h4>';
+        d.onclick = () => startCourse(c);
+        wrap.appendChild(d);
+      });
+    }
+
+    async function startCourse(c) {
+      activeCourse = c;
+      const r = await fetch('/api/course-content?url=' + encodeURIComponent(c.url));
+      courseData = await r.json();
+      chIdx = 0;
+      document.getElementById('portal').style.display = 'none';
+      document.getElementById('study').style.display = 'block';
+      document.getElementById('studyTitle').innerText = c.name;
+      document.getElementById('studyBelong').innerText = c.belongTo;
+      renderCh();
+    }
+
+    function renderCh() {
+      const ch = courseData.chapters[chIdx];
+      document.getElementById('chapterIndex').innerText = 'CHAPTER ' + (chIdx + 1) + ' / ' + courseData.chapters.length;
+      document.getElementById('studyTitle').innerText = ch.title;
+      
+      // 1. 渲染正文 HTML
+      const contentEl = document.getElementById('studyContent');
+      contentEl.innerHTML = ch.content;
+
+      // 2. 触发 KaTeX 数学公式自动解析
+      if (window.renderMathInElement) {
+        renderMathInElement(contentEl, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+
+      // 3. 构建动态交互沙盒（如果章节配置了 interactive 属性，或智能匹配线性代数类主题）
+      setupInteractiveSandbox(ch);
+
+      // 4. 渲染随堂测验
+      curAns = null;
+      const qBox = document.getElementById('quizArea');
+      qBox.innerHTML = '';
+      if (ch.quiz) {
+        const wrap = document.createElement('div');
+        wrap.className = 'quiz-card';
+        wrap.innerHTML = '<strong>💡 随堂概念测验：' + ch.quiz.question + '</strong>';
+        ch.quiz.options.forEach((opt, i) => {
+          const o = document.createElement('div');
+          o.className = 'quiz-opt';
+          o.innerText = opt;
+          o.onclick = () => {
+            wrap.querySelectorAll('.quiz-opt').forEach(el => el.classList.remove('selected'));
+            o.classList.add('selected');
+            curAns = i;
+          };
+          wrap.appendChild(o);
+        });
+        qBox.appendChild(wrap);
+      }
+      document.getElementById('prevBtn').disabled = (chIdx === 0);
+    }
+
+    // ==========================================
+    // 动态几何 & 矩阵空间变换引擎 (Canvas 2D)
+    // ==========================================
+    function setupInteractiveSandbox(ch) {
+      const area = document.getElementById('interactiveSandboxArea');
+      if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+      area.innerHTML = '';
+
+      // 只要配置了 interactive 或者标题包含向量/变换/矩阵，均动态挂载沙盒
+      const needsGeo = ch.interactive || /向量|变换|矩阵|空间|基/i.test(ch.title);
+      if (!needsGeo) return;
+
+      area.innerHTML = `
+        <div class="geo-sandbox">
+          <div class="geo-sandbox-header">
+            <div>
+              <strong style="font-size:0.95rem;">📐 空间交互变换视窗</strong>
+              <span style="font-size:0.8rem; color:var(--text-sub); margin-left:10px;">拖动滑块操纵基向量落点，观察空间变形与行列式面积</span>
+            </div>
+            <div id="detIndicator" style="font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8;">det(A) = 1.00</div>
+          </div>
+          <div class="geo-canvas-wrap">
+            <canvas id="geoCanvas"></canvas>
+          </div>
+          <div class="matrix-panel">
+            <div class="matrix-slider">
+              <span style="color:#f43f5e;">î_x (a):</span>
+              <input type="range" id="sl_a" min="-3" max="3" step="0.1" value="1">
+              <span id="val_a">1.0</span>
+            </div>
+            <div class="matrix-slider">
+              <span style="color:#f43f5e;">î_y (b):</span>
+              <input type="range" id="sl_b" min="-3" max="3" step="0.1" value="0">
+              <span id="val_b">0.0</span>
+            </div>
+            <div class="matrix-slider">
+              <span style="color:#10b981;">ĵ_x (c):</span>
+              <input type="range" id="sl_c" min="-3" max="3" step="0.1" value="0">
+              <span id="val_c">0.0</span>
+            </div>
+            <div class="matrix-slider">
+              <span style="color:#10b981;">ĵ_y (d):</span>
+              <input type="range" id="sl_d" min="-3" max="3" step="0.1" value="1">
+              <span id="val_d">1.0</span>
+            </div>
+          </div>
+          <div class="preset-chips">
+            <span class="chip" onclick="applyPreset(1,0,0,1)">恒等变换 (Identity)</span>
+            <span class="chip" onclick="applyPreset(1,0,1,1)">水平剪切 (Shear X)</span>
+            <span class="chip" onclick="applyPreset(0.7,-0.7,0.7,0.7)">逆时针旋转 45°</span>
+            <span class="chip" onclick="applyPreset(1,1,1,1)">降维打击 (det = 0)</span>
+            <span class="chip" onclick="applyPreset(2,0,0,2)">均匀放大 2×</span>
+          </div>
+        </div>
+      `;
+
+      initCanvasSandbox();
+    }
+
+    let mState = { a: 1, b: 0, c: 0, d: 1 };
+
+    function applyPreset(a, b, c, d) {
+      mState = { a, b, c, d };
+      document.getElementById('sl_a').value = a; document.getElementById('val_a').innerText = a.toFixed(1);
+      document.getElementById('sl_b').value = b; document.getElementById('val_b').innerText = b.toFixed(1);
+      document.getElementById('sl_c').value = c; document.getElementById('val_c').innerText = c.toFixed(1);
+      document.getElementById('sl_d').value = d; document.getElementById('val_d').innerText = d.toFixed(1);
+    }
+
+    function initCanvasSandbox() {
+      const canvas = document.getElementById('geoCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+        canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+      resize();
+
+      ['a','b','c','d'].forEach(key => {
+        const slider = document.getElementById('sl_' + key);
+        slider.oninput = (e) => {
+          mState[key] = parseFloat(e.target.value);
+          document.getElementById('val_' + key).innerText = mState[key].toFixed(1);
+        };
       });
 
-      for (const [moduleName, list] of Object.entries(modules)) {
-        const modEl = document.createElement('div');
-        modEl.className = 'module-group';
-        modEl.innerHTML = `<h3 class="module-header">${moduleName}</h3>`;
+      function draw() {
+        const w = canvas.parentElement.clientWidth;
+        const h = canvas.parentElement.clientHeight;
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = 40; // 1 个单位 = 40 像素
 
-        const cardsWrap = document.createElement('div');
-        cardsWrap.className = 'course-cards';
+        ctx.clearRect(0, 0, w, h);
 
-        list.forEach(c => {
-          const userProg = sumData.allProgressMap[c.name];
-          const completedCount = userProg ? userProg.completedChapters.length : 0;
+        const { a, b, c, d } = mState;
+        const det = a * d - b * c;
+        const detEl = document.getElementById('detIndicator');
+        if (detEl) detEl.innerText = `det(A) = ${det.toFixed(2)}`;
 
-          const card = document.createElement('div');
-          card.className = 'course-card';
-          card.innerHTML = `
-            <span class="tag-module">${c.belongTo}</span>
-            <h4 style="margin: 10px 0 6px 0;">${c.name}</h4>
-            <div style="font-size:0.8rem; color:var(--text-sub); margin-top:12px;">
-              ${userProg ? `已修章节：${completedCount} 节` : '尚未启程'}
-            </div>
-          `;
-          card.onclick = () => openCourse(c, userProg ? userProg.lastChapterIndex : 0);
-          cardsWrap.appendChild(card);
-        });
-
-        modEl.appendChild(cardsWrap);
-        container.appendChild(modEl);
-      }
-    }
-
-    // --- 进入课程研读 ---
-    async function openCourse(course, startChapterIdx = 0) {
-      activeCourse = course;
-      currentChapterIdx = startChapterIdx;
-
-      // 切换视图
-      document.getElementById('portalView').style.display = 'none';
-      document.getElementById('studyView').style.display = 'block';
-
-      document.getElementById('studyCourseTitle').innerText = course.name;
-      document.getElementById('studyBelongTo').innerText = course.belongTo;
-
-      // 从后端读取课程 JSON 结构
-      const res = await fetch(`/api/course-content?url=${encodeURIComponent(course.url)}`);
-      activeLessonData = await res.json();
-
-      renderChapter();
-    }
-
-    function resumeCourse(encodedCourseData) {
-      const data = JSON.parse(decodeURIComponent(encodedCourseData));
-      openCourse({
-        name: data.courseName,
-        belongTo: data.belongTo,
-        url: data.courseUrl
-      }, data.lastChapterIndex || 0);
-    }
-
-    function exitStudyView() {
-      document.getElementById('studyView').style.display = 'none';
-      document.getElementById('portalView').style.display = 'block';
-      loadDashboardAndCourses();
-    }
-
-    // --- 章节与答题引擎渲染 ---
-    function renderChapter() {
-      if (!activeLessonData || !activeLessonData.chapters) return;
-      const ch = activeLessonData.chapters[currentChapterIdx];
-
-      document.getElementById('chapterIndexBadge').innerText = `第 ${currentChapterIdx + 1} / ${activeLessonData.chapters.length} 节`;
-      document.getElementById('chapterTitle').innerText = ch.title;
-      document.getElementById('studyContentArea').innerHTML = ch.content || '<p>本节无静态正文。</p>';
-
-      // 计算进度条
-      const progressPercent = ((currentChapterIdx + 1) / activeLessonData.chapters.length) * 100;
-      document.getElementById('courseProgressFill').style.width = `${progressPercent}%`;
-
-      // 渲染测验
-      const quizBox = document.getElementById('quizContainer');
-      quizBox.innerHTML = '';
-      selectedAnswer = null;
-
-      if (ch.quiz) {
-        const qCard = document.createElement('div');
-        qCard.className = 'quiz-card';
-        qCard.innerHTML = `<h4 style="margin-bottom:8px;">💡 课内随堂测验：${ch.quiz.question}</h4>`;
-
-        ch.quiz.options.forEach((opt, idx) => {
-          const optBtn = document.createElement('div');
-          optBtn.className = 'quiz-option';
-          optBtn.innerText = opt;
-          optBtn.onclick = () => {
-            qCard.querySelectorAll('.quiz-option').forEach(el => el.classList.remove('selected'));
-            optBtn.classList.add('selected');
-            selectedAnswer = idx;
-          };
-          qCard.appendChild(optBtn);
-        });
-
-        quizBox.appendChild(qCard);
-      }
-
-      // 控制导航按钮状态
-      document.getElementById('prevChapterBtn').disabled = currentChapterIdx === 0;
-      document.getElementById('nextChapterBtn').innerText = (currentChapterIdx === activeLessonData.chapters.length - 1) ? '完成研学并同步' : '下一节并同步';
-    }
-
-    async function navChapter(direction) {
-      const ch = activeLessonData.chapters[currentChapterIdx];
-      let quizScore = null;
-
-      // 评估测验答题结果
-      if (ch.quiz) {
-        if (selectedAnswer === null) {
-          if (!confirm('你尚未完成随堂测验，确定直接跳过进入下一节吗？')) return;
-        } else {
-          quizScore = {
-            score: (selectedAnswer === ch.quiz.answerIndex) ? 100 : 0,
-            total: 100
-          };
+        // 1. 绘制原始底色网格
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+        for (let x = -10; x <= 10; x++) {
+          ctx.beginPath();
+          ctx.moveTo(cx + x * scale, 0);
+          ctx.lineTo(cx + x * scale, h);
+          ctx.stroke();
         }
+        for (let y = -10; y <= 10; y++) {
+          ctx.beginPath();
+          ctx.moveTo(0, cy + y * scale);
+          ctx.lineTo(w, cy + y * scale);
+          ctx.stroke();
+        }
+
+        // 2. 绘制变换后的网格（受矩阵 a,b,c,d 变形）
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.2)';
+        ctx.lineWidth = 1;
+        for (let i = -8; i <= 8; i++) {
+          // 常数 x 直线变换
+          ctx.beginPath();
+          const startX = i * a - 8 * c;
+          const startY = i * b - 8 * d;
+          const endX = i * a + 8 * c;
+          const endY = i * b + 8 * d;
+          ctx.moveTo(cx + startX * scale, cy - startY * scale);
+          ctx.lineTo(cx + endX * scale, cy - endY * scale);
+          ctx.stroke();
+
+          // 常数 y 直线变换
+          ctx.beginPath();
+          const sX = -8 * a + i * c;
+          const sY = -8 * b + i * d;
+          const eX = 8 * a + i * c;
+          const eY = 8 * b + i * d;
+          ctx.moveTo(cx + sX * scale, cy - sY * scale);
+          ctx.lineTo(cx + eX * scale, cy - eY * scale);
+          ctx.stroke();
+        }
+
+        // 3. 绘制行列式面积（平行四边形）
+        ctx.fillStyle = det >= 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(244, 63, 94, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + a * scale, cy - b * scale);
+        ctx.lineTo(cx + (a + c) * scale, cy - (b + d) * scale);
+        ctx.lineTo(cx + c * scale, cy - d * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. 绘制世界坐标原点坐标轴
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+        ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+        ctx.stroke();
+
+        // 5. 绘制变换后的基向量 î (红色) 和 ĵ (绿色)
+        drawVector(ctx, cx, cy, a * scale, -b * scale, '#f43f5e', 'î');
+        drawVector(ctx, cx, cy, c * scale, -d * scale, '#10b981', 'ĵ');
+
+        canvasAnimId = requestAnimationFrame(draw);
       }
 
-      // 同步当前章节与答题成绩至 MongoDB
+      function drawVector(ctx, fromX, fromY, vecX, vecY, color, label) {
+        const toX = fromX + vecX;
+        const toY = fromY + vecY;
+        const headlen = 10;
+        const angle = Math.atan2(vecY, vecX);
+
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 3;
+
+        // 箭杆
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+        ctx.stroke();
+
+        // 箭头
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+
+        // 标签文字
+        ctx.font = 'bold 13px JetBrains Mono';
+        ctx.fillText(label, toX + 8, toY + 4);
+      }
+
+      draw();
+    }
+
+    async function moveChapter(dir) {
+      const ch = courseData.chapters[chIdx];
+      let score = null;
+      if (ch.quiz && curAns !== null) {
+        score = { score: curAns === ch.quiz.answerIndex ? 100 : 0, total: 100 };
+      }
       await fetch('/api/progress/update', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           courseName: activeCourse.name,
           belongTo: activeCourse.belongTo,
           courseUrl: activeCourse.url,
-          chapterIndex: currentChapterIdx,
-          quizResult: quizScore
+          chapterIndex: chIdx,
+          quizResult: score
         })
       });
 
-      const nextIdx = currentChapterIdx + direction;
-      if (nextIdx >= 0 && nextIdx < activeLessonData.chapters.length) {
-        currentChapterIdx = nextIdx;
-        renderChapter();
-      } else if (nextIdx >= activeLessonData.chapters.length) {
-        alert('🎉 恭喜！你已完成本科目的所有章节学习，成就数据已更新到云端！');
-        exitStudyView();
+      const next = chIdx + dir;
+      if (next >= 0 && next < courseData.chapters.length) {
+        chIdx = next;
+        renderCh();
+      } else if (next >= courseData.chapters.length) {
+        alert('🎉 恭喜完成本科目全部章节！');
+        exitStudy();
       }
+    }
+
+    function exitStudy() {
+      if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+      document.getElementById('study').style.display = 'none';
+      document.getElementById('portal').style.display = 'block';
+      initDashboard();
     }
   </script>
 </body>
