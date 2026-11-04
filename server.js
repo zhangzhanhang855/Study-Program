@@ -13,11 +13,14 @@ app.use(express.json());
 app.use(cookieParser());
 
 // --- 数据库模型 ---
-const User = mongoose.model('User', new mongoose.Schema({
+// 将字段正式统一为 username 与 password，开启 strict: false 兼容老字段
+const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
-  passwordHash: { type: String, required: true },
+  password: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
-}));
+}, { strict: false });
+
+const User = mongoose.model('User', UserSchema);
 
 const Session = mongoose.model('Session', new mongoose.Schema({
   sessionId: { type: String, unique: true, required: true },
@@ -37,13 +40,14 @@ const StudyProgress = mongoose.model('StudyProgress', new mongoose.Schema({
 }).index({ userId: 1, courseName: 1 }, { unique: true }));
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('[DB] Connected.'))
-  .catch(err => console.error('[DB] Error:', err));
+  .then(() => console.log('[DB] Connected successfully to CorporateDB.'))
+  .catch(err => console.error('[DB] Connection error:', err));
 
 // --- 鉴权中间件 ---
 async function authMiddleware(req, res, next) {
   const sessionId = req.cookies.sessionId;
   if (!sessionId) return res.status(401).json({ error: '未登录' });
+  
   const session = await Session.findOne({ sessionId }).populate('userId');
   if (!session || !session.userId) {
     res.clearCookie('sessionId');
@@ -54,33 +58,87 @@ async function authMiddleware(req, res, next) {
 }
 
 // --- 鉴权路由 ---
+// 1. 注册：以 password 字段名存入密文
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password || password.length < 6) return res.status(400).json({ error: '密码至少6位' });
-    if (await User.findOne({ username })) return res.status(400).json({ error: '用户名已存在' });
-    const user = await User.create({ username, passwordHash: await bcrypt.hash(password, 10) });
+    if (!username || !password || password.length < 6) {
+      return res.status(400).json({ error: '用户名与密码必填，且密码长度需不少于 6 位' });
+    }
+    
+    if (await User.findOne({ username })) {
+      return res.status(400).json({ error: '该用户名已存在' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ username, password: hashedPassword });
+
     const sessionId = crypto.randomUUID();
     await Session.create({ sessionId, userId: user._id });
-    res.cookie('sessionId', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 86400 * 1000 });
+
+    res.cookie('sessionId', sessionId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 7 * 86400 * 1000
+    });
+    
     res.json({ success: true, username: user.username });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: '注册失败: ' + e.message });
+  }
 });
 
+// 2. 登录：平滑兼容 password、passwordHash 及明文
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: '请填写完整的用户名和密码' });
+    }
+
     const user = await User.findOne({ username });
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: '账号或密码错误' });
+    if (!user) {
+      return res.status(401).json({ error: '用户不存在' });
+    }
+
+    // 兼容取值：优先读取 password，备选读取历史字段 passwordHash 或 pwd
+    const storedSecret = user.password || user.passwordHash || user.pwd;
+    if (!storedSecret) {
+      return res.status(500).json({ error: '此账号尚未录入有效密码字段，请重新注册' });
+    }
+
+    let isMatch = false;
+    try {
+      // 尝试按 bcrypt 哈希算法进行比对
+      isMatch = await bcrypt.compare(password, storedSecret);
+    } catch (bcryptErr) {
+      // 容错：如果数据库历史录入的是纯明文密码，做兜底匹配
+      isMatch = (password === storedSecret);
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ error: '密码错误' });
+    }
+
     const sessionId = crypto.randomUUID();
     await Session.create({ sessionId, userId: user._id });
-    res.cookie('sessionId', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 86400 * 1000 });
+
+    res.cookie('sessionId', sessionId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 7 * 86400 * 1000
+    });
+
     res.json({ success: true, username: user.username });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: '登录处理异常: ' + e.message });
+  }
 });
 
 app.post('/api/auth/logout', async (req, res) => {
-  if (req.cookies.sessionId) await Session.deleteOne({ sessionId: req.cookies.sessionId });
+  if (req.cookies.sessionId) {
+    await Session.deleteOne({ sessionId: req.cookies.sessionId });
+  }
   res.clearCookie('sessionId');
   res.json({ success: true });
 });
@@ -89,10 +147,10 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ authenticated: true, username: req.user.username });
 });
 
-// --- 列表抓取与内容代理 ---
+// --- 列表与内容代理 ---
 app.get('/api/courses', authMiddleware, async (req, res) => {
   try {
-    const r = await fetch('https://studyindex.pages.dev/list.txt');
+    const r = await fetch('https://studyindex-cg1.pages.dev/list.txt');
     const text = await r.text();
     const regex = /NAME\s*=\s*["“”](.*?)["“”]\s*,\s*BELONG_TO\s*=\s*["“”](.*?)["“”]\s*,\s*URL\s*=\s*["“”](.*?)["“”]/g;
     const courses = [];
@@ -101,7 +159,9 @@ app.get('/api/courses', authMiddleware, async (req, res) => {
       courses.push({ name: m[1].trim(), belongTo: m[2].trim(), url: m[3].trim() });
     }
     res.json({ courses });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/course-content', authMiddleware, async (req, res) => {
@@ -112,10 +172,12 @@ app.get('/api/course-content', authMiddleware, async (req, res) => {
     }
     const r = await fetch(target);
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// --- 进度存取 ---
+// --- 学习进度存取 ---
 app.get('/api/progress/summary', authMiddleware, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -123,36 +185,55 @@ app.get('/api/progress/summary', authMiddleware, async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400 * 1000);
     const weeklyRecords = await StudyProgress.find({ userId, updatedAt: { $gte: sevenDaysAgo } }).sort({ updatedAt: -1 });
     const all = await StudyProgress.find({ userId });
+    
     res.json({
       lastProgress,
       weeklyRecords,
       allProgressMap: all.reduce((acc, c) => ({ ...acc, [c.courseName]: c }), {})
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/progress/update', authMiddleware, async (req, res) => {
   try {
     const { courseName, belongTo, courseUrl, chapterIndex, quizResult } = req.body;
     let p = await StudyProgress.findOne({ userId: req.user._id, courseName });
+    
     if (!p) {
-      p = new StudyProgress({ userId: req.user._id, courseName, belongTo, courseUrl, lastChapterIndex: chapterIndex, completedChapters: [chapterIndex], quizScores: [] });
+      p = new StudyProgress({
+        userId: req.user._id,
+        courseName,
+        belongTo,
+        courseUrl,
+        lastChapterIndex: chapterIndex,
+        completedChapters: [chapterIndex],
+        quizScores: []
+      });
     } else {
       p.lastChapterIndex = chapterIndex;
       if (!p.completedChapters.includes(chapterIndex)) p.completedChapters.push(chapterIndex);
     }
+
     if (quizResult && typeof quizResult.score === 'number') {
       const idx = p.quizScores.findIndex(q => q.chapterIndex === chapterIndex);
-      if (idx >= 0) p.quizScores[idx] = { chapterIndex, score: quizResult.score, total: quizResult.total };
-      else p.quizScores.push({ chapterIndex, score: quizResult.score, total: quizResult.total });
+      if (idx >= 0) {
+        p.quizScores[idx] = { chapterIndex, score: quizResult.score, total: quizResult.total };
+      } else {
+        p.quizScores.push({ chapterIndex, score: quizResult.score, total: quizResult.total });
+      }
     }
+
     p.updatedAt = new Date();
     await p.save();
     res.json({ success: true, progress: p });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// --- 根路径返回前端页面（已妥善转义内层反引号与字符） ---
+// --- 前端静态托管 ---
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="zh-CN">
@@ -357,4 +438,4 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+app.listen(PORT, () => console.log('[JR AI Server] running on http://localhost:' + PORT));
