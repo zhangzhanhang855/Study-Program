@@ -1,281 +1,399 @@
-/**
- * JR AI - Study Hub Core Server
- */
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const axios = require('axios');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/jr_study';
 
-if (!MONGODB_URI) {
-  console.error('[Error] MONGODB_URI is not defined in environment variables!');
-  process.exit(1);
-}
-
-// 基础中间件
+// --- 中间件配置 ---
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ==================== MongoDB 架构设计 ====================
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('[DB] MongoDB Connected Successfully'))
-  .catch(err => console.error('[DB] Connection Error:', err));
-
-// 用户集合
+// --- MongoDB 数据模型 ---
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true, required: true },
   passwordHash: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 
-// Session 集合 (带自动过期 TTL)
 const SessionSchema = new mongoose.Schema({
   sessionId: { type: String, unique: true, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  createdAt: { type: Date, default: Date.now, expires: '7d' } // 7天过期
+  createdAt: { type: Date, default: Date.now, expires: 7 * 86400 } // 7天自动过期
 });
 
-// 学习进度与测验集合
-const ProgressSchema = new mongoose.Schema({
+const StudyProgressSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   courseName: { type: String, required: true },
-  belongTo: { type: String, required: true },
-  chapterId: { type: String, required: true },
-  completed: { type: Boolean, default: false },
-  quizScore: { type: Number, default: 0 },
-  quizAnswers: { type: Object, default: {} },
+  belongTo: { type: String, default: '未分类' },
+  courseUrl: { type: String, required: true },
+  lastChapterIndex: { type: Number, default: 0 },
+  completedChapters: [{ type: Number }],
+  quizScores: [{ chapterIndex: Number, score: Number, total: Number }],
   updatedAt: { type: Date, default: Date.now }
 });
 
+// 建立复合索引
+StudyProgressSchema.index({ userId: 1, courseName: 1 }, { unique: true });
+
 const User = mongoose.model('User', UserSchema);
 const Session = mongoose.model('Session', SessionSchema);
-const Progress = mongoose.model('Progress', ProgressSchema);
+const StudyProgress = mongoose.model('StudyProgress', StudyProgressSchema);
 
-// ==================== 身份验证中间件 ====================
+// --- 数据库连接 ---
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('[DB] MongoDB connected successfully.'))
+  .catch(err => console.error('[DB] Connection error:', err));
+
+// --- 鉴权中间件 ---
 async function authMiddleware(req, res, next) {
-  const sessionId = req.cookies.sid;
+  const sessionId = req.cookies.sessionId;
   if (!sessionId) {
-    return res.status(401).json({ success: false, message: '请先登录' });
+    return res.status(401).json({ error: '未登录或登录态失效' });
   }
 
-  try {
-    const session = await Session.findOne({ sessionId }).populate('userId');
-    if (!session || !session.userId) {
-      res.clearCookie('sid');
-      return res.status(401).json({ success: false, message: 'Session 已失效，请重新登录' });
-    }
-    req.user = session.userId;
-    next();
-  } catch (err) {
-    return res.status(500).json({ success: false, message: '认证服务异常' });
+  const session = await Session.findOne({ sessionId }).populate('userId');
+  if (!session || !session.userId) {
+    res.clearCookie('sessionId');
+    return res.status(401).json({ error: 'Session 无效' });
   }
+
+  req.user = session.userId;
+  next();
 }
 
-// ==================== 用户认证 API ====================
+// ==================== 接口路由 ====================
+
+// 1. 用户注册
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ success: false, message: '账号或密码不能为空' });
-  }
-
   try {
-    const existing = await User.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ success: false, message: '该用户名已被注册' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-    await User.create({ username, passwordHash });
-    res.json({ success: true, message: '注册成功，请直接登录' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: '注册失败，请稍后再试' });
-  }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(400).json({ success: false, message: '用户不存在' });
+    const { username, password } = req.body;
+    if (!username || !password || password.length < 6) {
+      return res.status(400).json({ error: '用户名或密码格式不合规（密码至少6位）' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: '密码错误' });
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: '该用户名已被注册' });
     }
 
-    // 生成随机高强度 Session ID
-    const sessionId = crypto.randomBytes(32).toString('hex');
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({ username, passwordHash });
+
+    // 注册完成后自动分配 Session
+    const sessionId = crypto.randomUUID();
     await Session.create({ sessionId, userId: user._id });
 
-    // 存储 Session ID 到 HTTP-Only Cookie 中
-    res.cookie('sid', sessionId, {
+    res.cookie('sessionId', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7天
+      maxAge: 7 * 86400 * 1000
     });
 
-    res.json({ success: true, user: { username: user.username } });
+    res.json({ success: true, username: user.username });
   } catch (err) {
-    res.status(500).json({ success: false, message: '登录异常' });
+    res.status(500).json({ error: '注册失败: ' + err.message });
   }
 });
 
+// 2. 用户登录
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(401).json({ error: '用户名或密码不正确' });
+    }
+
+    const sessionId = crypto.randomUUID();
+    await Session.create({ sessionId, userId: user._id });
+
+    res.cookie('sessionId', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 86400 * 1000
+    });
+
+    res.json({ success: true, username: user.username });
+  } catch (err) {
+    res.status(500).json({ error: '登录处理异常: ' + err.message });
+  }
+});
+
+// 3. 用户登出
 app.post('/api/auth/logout', async (req, res) => {
-  const sessionId = req.cookies.sid;
+  const sessionId = req.cookies.sessionId;
   if (sessionId) {
     await Session.deleteOne({ sessionId });
-    res.clearCookie('sid');
+    res.clearCookie('sessionId');
   }
-  res.json({ success: true, message: '已安全登出' });
+  res.json({ success: true });
 });
 
+// 4. 验证登录状态
 app.get('/api/auth/me', authMiddleware, (req, res) => {
-  res.json({ success: true, user: { username: req.user.username } });
+  res.json({ authenticated: true, username: req.user.username });
 });
 
-// ==================== 学习内容拉取与解析 ====================
-// 解析 list.txt 格式: NAME="...",BELONG_TO="...",URL="..."
-function parseCourseList(rawText) {
-  const lines = rawText.split('\n');
-  const list = [];
-  const regex = /NAME=["“](.*?)["”]\s*,\s*BELONG_TO=["“](.*?)["”]\s*,\s*URL=["“](.*?)["”]/i;
-
-  for (let line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const match = trimmed.match(regex);
-    if (match) {
-      list.push({
-        name: match[1],
-        belongTo: match[2],
-        url: match[3]
-      });
-    }
-  }
-  return list;
-}
-
+// 5. 抓取并解析 studyindex.pages.dev/list.txt
 app.get('/api/courses', authMiddleware, async (req, res) => {
   try {
-    const response = await axios.get('https://studyindex.pages.dev/list.txt', { timeout: 8000 });
-    const courses = parseCourseList(response.data);
+    const targetUrl = 'https://studyindex.pages.dev/list.txt';
+    const response = await fetch(targetUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP Error ${response.status}`);
+    }
+    const rawText = await response.text();
 
-    // 查询该用户已有的学习概况
-    const userProgress = await Progress.find({ userId: req.user._id });
-    const progressMap = {};
-    userProgress.forEach(p => {
-      if (!progressMap[p.courseName]) progressMap[p.courseName] = [];
-      progressMap[p.courseName].push(p);
-    });
+    // 格式解析：NAME=“...”,BELONG_TO=“...”,URL=“...” (兼容各种全角/半角引号)
+    const regex = /NAME\s*=\s*["“”](.*?)["“”]\s*,\s*BELONG_TO\s*=\s*["“”](.*?)["“”]\s*,\s*URL\s*=\s*["“”](.*?)["“”]/g;
+    const courses = [];
+    let match;
 
-    const enrichedCourses = courses.map(course => {
-      const records = progressMap[course.name] || [];
-      const completedCount = records.filter(r => r.completed).length;
-      return {
-        ...course,
-        recordsCount: records.length,
-        completedCount
-      };
-    });
-
-    res.json({ success: true, courses: enrichedCourses });
-  } catch (err) {
-    console.error('[Course List Fetch Error]:', err.message);
-    res.status(500).json({ success: false, message: '无法获取课程列表' });
-  }
-});
-
-// 代理读取课程源代码与交互 JSON
-app.get('/api/course/content', authMiddleware, async (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).json({ success: false, message: '缺少课程 URL' });
-
-  try {
-    // 自动将 GitHub Blob 转换为 raw 格式（若适用）
-    let targetUrl = url;
-    if (targetUrl.includes('github.com') && targetUrl.includes('/blob/')) {
-      targetUrl = targetUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+    while ((match = regex.exec(rawText)) !== null) {
+      courses.push({
+        name: match[1].trim(),
+        belongTo: match[2].trim(),
+        url: match[3].trim()
+      });
     }
 
-    const response = await axios.get(targetUrl, { timeout: 10000 });
-    res.json({ success: true, data: response.data });
+    res.json({ courses });
   } catch (err) {
-    res.status(500).json({ success: false, message: '读取课程资源失败' });
+    console.error('[Fetch courses error]', err);
+    res.status(500).json({ error: '获取学习列表失败: ' + err.message });
   }
 });
 
-// ==================== 进度存储与仪表盘统计 ====================
-// 上报答题情况与完成状态
-app.post('/api/progress/save', authMiddleware, async (req, res) => {
-  const { courseName, belongTo, chapterId, completed, quizScore, quizAnswers } = req.body;
-
+// 6. 课程详情 JSON 代理（避免直接拉取 GitHub 触发 CORS 或限流）
+app.get('/api/course-content', authMiddleware, async (req, res) => {
   try {
-    const record = await Progress.findOneAndUpdate(
-      { userId: req.user._id, courseName, chapterId },
-      {
-        belongTo,
-        completed,
-        quizScore,
-        quizAnswers,
-        updatedAt: new Date()
-      },
-      { upsert: true, new: true }
-    );
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: '缺少 URL 参数' });
 
-    res.json({ success: true, record });
+    // 允许 GitHub Raw 转换
+    let target = url;
+    if (target.includes('github.com') && target.includes('/blob/')) {
+      target = target.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+    }
+
+    const response = await fetch(target);
+    if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+    const data = await response.json();
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ success: false, message: '进度保存失败' });
+    res.status(500).json({ error: '读取课程详情失败: ' + err.message });
   }
 });
 
-// 获取“每日概况”：断点续学 + 本周成果
-app.get('/api/dashboard/overview', authMiddleware, async (req, res) => {
+// 7. 获取用户学习汇总（每日概况、最近进度、本周统计）
+app.get('/api/progress/summary', authMiddleware, async (req, res) => {
   try {
-    // 1. 最近一次学习项目（断点续学）
-    const lastSession = await Progress.findOne({ userId: req.user._id })
-      .sort({ updatedAt: -1 });
+    const userId = req.user._id;
 
-    // 2. 本周成果（近7天）
+    // 获取最近修改的一门课程
+    const lastProgress = await StudyProgress.findOne({ userId }).sort({ updatedAt: -1 });
+
+    // 获取最近 7 天更新的学习记录
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const weeklyRecords = await Progress.find({
-      userId: req.user._id,
+    const weeklyRecords = await StudyProgress.find({
+      userId,
       updatedAt: { $gte: sevenDaysAgo }
-    });
+    }).sort({ updatedAt: -1 });
 
-    const completedThisWeek = weeklyRecords.filter(r => r.completed).length;
-    const avgScore = weeklyRecords.length > 0 
-      ? Math.round(weeklyRecords.reduce((acc, cur) => acc + (cur.quizScore || 0), 0) / weeklyRecords.length)
-      : 0;
+    // 所有已保存的各科进度字典
+    const allProgress = await StudyProgress.find({ userId });
 
     res.json({
-      success: true,
-      lastSession: lastSession || null,
-      weeklyStats: {
-        totalInteractions: weeklyRecords.length,
-        completedChapters: completedThisWeek,
-        avgScore
-      }
+      lastProgress,
+      weeklyRecords,
+      allProgressMap: allProgress.reduce((acc, cur) => {
+        acc[cur.courseName] = cur;
+        return acc;
+      }, {})
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: '获取看板数据失败' });
+    res.status(500).json({ error: '查询进度失败: ' + err.message });
   }
 });
 
-// 启动服务
-app.listen(PORT, () => {
-  console.log(`[JR AI Server] Running on http://localhost:${PORT}`);
+// 8. 上传/同步答题及学习进度
+app.post('/api/progress/update', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { courseName, belongTo, courseUrl, chapterIndex, quizResult } = req.body;
+
+    if (!courseName) {
+      return res.status(400).json({ error: '缺少 courseName' });
+    }
+
+    let progress = await StudyProgress.findOne({ userId, courseName });
+
+    if (!progress) {
+      progress = new StudyProgress({
+        userId,
+        courseName,
+        belongTo,
+        courseUrl,
+        lastChapterIndex: chapterIndex || 0,
+        completedChapters: [chapterIndex || 0],
+        quizScores: []
+      });
+    } else {
+      progress.lastChapterIndex = chapterIndex;
+      if (!progress.completedChapters.includes(chapterIndex)) {
+        progress.completedChapters.push(chapterIndex);
+      }
+    }
+
+    // 如果上传了当前章节答题得分
+    if (quizResult && typeof quizResult.score === 'number') {
+      const idx = progress.quizScores.findIndex(q => q.chapterIndex === chapterIndex);
+      if (idx >= 0) {
+        progress.quizScores[idx] = { chapterIndex, score: quizResult.score, total: quizResult.total };
+      } else {
+        progress.quizScores.push({ chapterIndex, score: quizResult.score, total: quizResult.total });
+      }
+    }
+
+    progress.updatedAt = new Date();
+    await progress.save();
+
+    res.json({ success: true, progress });
+  } catch (err) {
+    res.status(500).json({ error: '更新进度失败: ' + err.message });
+  }
 });
+
+app.listen(PORT, () => {
+  console.log(`[JR AI Server] running on http://localhost:${PORT}`); }); ```  ---  ### 3. 前端交互界面：`public/index.html`  该页面集成了深色磨砂（Glassmorphism）视觉方案，且完全原生支持 Session 维持校验、每日概况、分模块课程浏览以及动态答题器。  ```html <!DOCTYPE html> <html lang="zh-CN"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>JR AI 智能研学中枢</title> <!-- 引入 Google Sans & Noto Serif SC 衬线字体 --> <link rel="preconnect" href="https://fonts.googleapis.com"> <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet"> <style> :root { --bg-dark: #0c0f14; --card-bg: rgba(26, 32, 44, 0.65); --card-border: rgba(255, 255, 255, 0.1); --accent: #3b82f6; --accent-glow: rgba(59, 130, 246, 0.35); --accent-green: #10b981; --text-main: #f3f4f6; --text-sub: #9ca3af; --font-code: "SF Mono", "Fira Code", monospace; }  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }  body { background-color: var(--bg-dark); background-image: radial-gradient(at 0\% 0\%, rgba(59, 130, 246, 0.12) 0px, transparent 50\%), radial-gradient(at 100\% 100\%, rgba(139, 92, 246, 0.1) 0px, transparent 50\%); color: var(--text-main); font-family: 'Google Sans', 'Noto Serif SC', -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }  /* 顶栏 */ header { backdrop-filter: blur(20px); background: rgba(12, 15, 20, 0.7); border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; }  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; }  .brand-tag { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: #fff; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-family: var(--font-code); }  .user-profile { display: flex; align-items: center; gap: 16px; font-size: 0.9rem; }  .btn-ghost { background: transparent; border: 1px solid var(--card-border); color: var(--text-sub); padding: 6px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; }  .btn-ghost:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: rgba(255, 255, 255, 0.3); }  /* 主容器 */ main { flex: 1; max-width: 1200px; width: 100\%; margin: 0 auto; padding: 32px 24px; }  /* 模态框与登录窗 */ .auth-overlay { position: fixed; inset: 0; backdrop-filter: blur(25px); background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }  .glass-box { background: var(--card-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 20px; padding: 36px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }  .auth-card { width: 100\%; max-width: 400px; text-align: center; }  .auth-card h2 { font-size: 1.5rem; margin-bottom: 8px; font-weight: 600; }  .auth-card p { color: var(--text-sub); font-size: 0.85rem; margin-bottom: 24px; }  .form-group { margin-bottom: 16px; text-align: left; }  .form-group label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 6px; }  .input-glass { width: 100\%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 14px; color: #fff; font-size: 0.95rem; outline: none; transition: all 0.2s; }  .input-glass:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }  .btn-primary { width: 100\%; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 4px 14px var(--accent-glow); }  .btn-primary:active { transform: scale(0.98); }  /* 每日看板 */ .dashboard-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-bottom: 40px; }  @media (max-width: 860px) { .dashboard-grid { grid-template-columns: 1fr; } }  .overview-card { position: relative; overflow: hidden; }  .overview-card h3 { font-size: 1.2rem; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }  .resume-box { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center; }  .tag-module { font-size: 0.75rem; color: #60a5fa; background: rgba(59, 130, 246, 0.15); padding: 3px 10px; border-radius: 12px; display: inline-block; margin-bottom: 6px; }  /* 课程分类库 */ .section-title { font-size: 1.3rem; margin-bottom: 20px; font-weight: 600; }  .module-group { margin-bottom: 32px; }  .module-header { font-size: 1rem; color: var(--text-sub); margin-bottom: 14px; border-left: 3px solid var(--accent); padding-left: 10px; }  .course-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }  .course-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; cursor: pointer; transition: all 0.25s ease; }  .course-card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.25); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3); }  /* 学习交互工作区 */ #studyView { display: none; }  .lesson-container { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 32px; margin-top: 16px; }  .quiz-card { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 20px; margin-top: 24px; }  .quiz-option { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border); padding: 12px 16px; border-radius: 8px; margin-top: 10px; cursor: pointer; transition: all 0.2s; }  .quiz-option:hover { background: rgba(255, 255, 255, 0.08); }  .quiz-option.selected { border-color: var(--accent); background: rgba(59, 130, 246, 0.15); }  .progress-bar-wrap { width: 100\%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden; margin: 16px 0; }  .progress-fill { height: 100\%; background: var(--accent); width: 0\%; transition: width 0.3s ease; } </style> </head> <body>  <!-- 顶栏 --> <header> <div class="brand"> <span>JR AI 学研终端</span> <span class="brand-tag">v2.0</span> </div> <div class="user-profile" id="userBar"> <span id="userNameDisplay">检测状态中...</span> <button class="btn-ghost" id="logoutBtn" style="display:none;" onclick="logout()">登出</button> </div> </header>  <!-- 登录 / 注册 浮层（如果未登录强制弹出） --> <div class="auth-overlay" id="authModal" style="display:none;"> <div class="glass-box auth-card"> <h2 id="authTitle">访问凭证验证</h2> <p id="authSubtitle">输入账号并颁发端侧安全 Session Cookie</p>  <div class="form-group"> <label>学员代号</label> <input type="text" id="username" class="input-glass" placeholder="例如：zhangzh" /> </div> <div class="form-group"> <label>访问密钥</label> <input type="password" id="password" class="input-glass" placeholder="••••••••" /> </div>  <button class="btn-primary" id="authSubmitBtn" onclick="handleAuthSubmit()">建立安全会话</button> <div style="margin-top: 16px; font-size: 0.85rem;"> <a href="javascript:void(0)" id="toggleAuthMode" style="color:var(--accent); text-decoration:none;" onclick="toggleAuthMode()">新学员？注册并接入</a> </div> </div> </div>  <!-- 核心视窗 --> <main> <!-- 1. 仪表盘与大纲 (Portal View) --> <div id="portalView"> <div class="dashboard-grid"> <!-- 每日概况 & 继续上次 --> <div class="glass-box overview-card"> <h3>📌 每日概况</h3> <div id="continueStudyCard"> <p style="color:var(--text-sub);">暂无未完成的项目，请在下方探索新课程。</p> </div> </div>  <!-- 本周成果 --> <div class="glass-box overview-card"> <h3>📈 本周成果</h3> <div id="weeklyStatsBox"> <p style="color:var(--text-sub);">正在同步本周节点活动...</p> </div> </div> </div>  <!-- 动态学习库 --> <h2 class="section-title">课程图谱</h2> <div id="courseContainer">正在从 studyindex.pages.dev 拉取索引...</div> </div>  <!-- 2. 交互学习视窗 (Study View) --> <div id="studyView"> <button class="btn-ghost" onclick="exitStudyView()" style="margin-bottom:16px;">← 返回知识库概览</button> <div class="lesson-container"> <span class="tag-module" id="studyBelongTo">归属模块</span> <h1 id="studyCourseTitle" style="margin: 8px 0;">课程名称</h1> <div class="progress-bar-wrap"> <div class="progress-fill" id="courseProgressFill"></div> </div>  <div style="display:flex; justify-content:space-between; margin-bottom: 24px; color:var(--text-sub); font-size:0.9rem;"> <span id="chapterTitle">章节加载中...</span> <span id="chapterIndexBadge">第 1 章</span> </div>  <!-- 交互内容呈现 --> <div id="studyContentArea" style="line-height: 1.7; font-size: 1.05rem; margin-bottom: 24px;"></div>  <!-- 动态答题卡片 --> <div id="quizContainer"></div>  <div style="display:flex; justify-content: space-between; margin-top: 32px;"> <button class="btn-ghost" id="prevChapterBtn" onclick="navChapter(-1)">上一节</button> <button class="btn-primary" style="width: auto; padding: 10px 24px;" id="nextChapterBtn" onclick="navChapter(1)">下一节并同步</button> </div> </div> </div> </main>  <script> let isRegisterMode = false; let currentUser = null; let activeCourse = null; let activeLessonData = null; let currentChapterIdx = 0; let selectedAnswer = null;  // --- 初始化检查 --- window.addEventListener('DOMContentLoaded', async () => { await checkAuth(); });  async function checkAuth() { try { const res = await fetch('/api/auth/me'); if (res.ok) { const data = await res.json(); currentUser = data.username; document.getElementById('userNameDisplay').innerText = `学员: ${currentUser}`;
+          document.getElementById('logoutBtn').style.display = 'inline-block';
+          document.getElementById('authModal').style.display = 'none';
+          loadDashboardAndCourses();
+        } else {
+          showAuthModal();
+        }
+      } catch (e) {
+        showAuthModal();
+      }
+    }
+
+    function showAuthModal() {
+      document.getElementById('userNameDisplay').innerText = '未接入';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('authModal').style.display = 'flex';
+    }
+
+    function toggleAuthMode() {
+      isRegisterMode = !isRegisterMode;
+      document.getElementById('authTitle').innerText = isRegisterMode ? '注册并接入' : '访问凭证验证';
+      document.getElementById('authSubtitle').innerText = isRegisterMode ? '创建新的学习节点并在安全环境中存储凭证' : '输入账号并颁发端侧安全 Session Cookie';
+      document.getElementById('authSubmitBtn').innerText = isRegisterMode ? '立即注册' : '建立安全会话';
+      document.getElementById('toggleAuthMode').innerText = isRegisterMode ? '已有账号？登入会话' : '新学员？注册并接入';
+    }
+
+    async function handleAuthSubmit() {
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      if (!u || !p) return alert('请填写用户名与密码');
+
+      const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        location.reload();
+      } else {
+        alert(data.error || '验证失败');
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      location.reload();
+    }
+
+    // --- 加载大纲与概况 ---
+    async function loadDashboardAndCourses() {
+      // 1. 获取每日概况与统计
+      const sumRes = await fetch('/api/progress/summary');
+      const sumData = await sumRes.json();
+
+      // 渲染继续上次学习
+      const contBox = document.getElementById('continueStudyCard');
+      if (sumData.lastProgress) {
+        const lp = sumData.lastProgress;
+        contBox.innerHTML = `
+          <div class="resume-box">
+            <div>
+              <span class="tag-module">${lp.belongTo}</span>
+              <h4 style="margin:4px 0 6px 0; font-size:1.1rem;">${lp.courseName}</h4>
+              <p style="font-size:0.85rem; color:var(--text-sub);">
+                上次定位在第 ${lp.lastChapterIndex + 1} 节 · 更新于 ${new Date(lp.updatedAt).toLocaleDateString()}
+              </p>
+            </div>
+            <button class="btn-primary" style="width:auto; padding:8px 16px;" onclick="resumeCourse('${encodeURIComponent(JSON.stringify(lp))}')">继续学习</button>
+          </div>
+        `;
+      }
+
+      // 渲染本周成果
+      const weeklyBox = document.getElementById('weeklyStatsBox');
+      if (sumData.weeklyRecords && sumData.weeklyRecords.length > 0) {
+        weeklyBox.innerHTML = `
+          <p style="margin-bottom:8px; font-size:0.95rem;">本周活跃研读科目：<strong>${sumData.weeklyRecords.length} 门</strong></p>
+          <ul style="padding-left:18px; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
+            ${sumData.weeklyRecords.slice(0, 3).map(r => `<li>${r.courseName} (已解锁 ${r.completedChapters.length} 节)</li>`).join('')}
+          </ul>
+        `;
+      } else {
+        weeklyBox.innerHTML = `<p style="color:var(--text-sub); font-size:0.9rem;">本周尚无研学归档，开启你的第一个里程碑吧！</p>`;
+      }
+
+      // 2. 获取并渲染课程列表
+      const courseRes = await fetch('/api/courses');
+      const { courses } = await courseRes.json();
+
+      const container = document.getElementById('courseContainer');
+      container.innerHTML = '';
+
+      // 按模块 BELONG_TO 分组
+      const modules = {};
+      courses.forEach(c => {
+        if (!modules[c.belongTo]) modules[c.belongTo] = [];
+        modules[c.belongTo].push(c);
+      });
+
+      for (const [moduleName, list] of Object.entries(modules)) {
+        const modEl = document.createElement('div');
+        modEl.className = 'module-group';
+        modEl.innerHTML = `<h3 class="module-header">${moduleName}</h3>`;
+
+        const cardsWrap = document.createElement('div');
+        cardsWrap.className = 'course-cards';
+
+        list.forEach(c => {
+          const userProg = sumData.allProgressMap[c.name];
+          const completedCount = userProg ? userProg.completedChapters.length : 0;
+
+          const card = document.createElement('div');
+          card.className = 'course-card';
+          card.innerHTML = `
+            <span class="tag-module">${c.belongTo}</span>
+            <h4 style="margin: 10px 0 6px 0;">${c.name}</h4>
+            <div style="font-size:0.8rem; color:var(--text-sub); margin-top:12px;">
+              ${
