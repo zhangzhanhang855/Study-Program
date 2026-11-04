@@ -172,7 +172,7 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 // --- 列表与详情代理 ---
 app.get('/api/courses', authMiddleware, async (req, res) => {
   try {
-    const r = await fetch('https://studyindex.pages.dev/list.txt');
+    const r = await fetch('https://studyindex-cg1.pages.dev/list.txt');
     const text = await r.text();
     const regex = /NAME\s*=\s*["“”](.*?)["“”]\s*,\s*BELONG_TO\s*=\s*["“”](.*?)["“”]\s*,\s*URL\s*=\s*["“”](.*?)["“”]/g;
     const courses = [];
