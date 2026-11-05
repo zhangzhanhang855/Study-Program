@@ -2,70 +2,134 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JR AI 智能研学中枢</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>JR AI 智能研学中枢 Pro</title>
   
-  <!-- 字体 -->
+  <!-- 字体预加载 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- KaTeX 数学公式渲染库 -->
+  <!-- KaTeX 数学渲染引擎 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
   <style>
+    /* ==========================================================================
+       1. 全局设计令牌 (Design Tokens)
+       ========================================================================== */
     :root {
-      --bg: #0b0f17;
-      --card-bg: rgba(22, 28, 41, 0.7);
+      --bg: #07090e;
+      --bg-surface: #0e131f;
+      --bg-card: rgba(20, 27, 44, 0.65);
+      --bg-card-hover: rgba(28, 38, 62, 0.75);
       --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.3);
-      --accent-purple: #8b5cf6;
-      --accent-emerald: #10b981;
-      --accent-rose: #f43f5e;
+      --card-border-glow: rgba(59, 130, 246, 0.35);
+
+      --primary: #3b82f6;
+      --primary-light: #60a5fa;
+      --primary-dark: #1d4ed8;
+      --primary-glow: rgba(59, 130, 246, 0.28);
+      
+      --purple: #8b5cf6;
+      --purple-glow: rgba(139, 92, 246, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.25);
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.25);
+
       --text-main: #f8fafc;
       --text-sub: #94a3b8;
-      --font-mono: 'JetBrains Mono', monospace;
+      --text-muted: #64748b;
+
+      --font-sans: 'Google Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-serif: 'Noto Serif SC', serif;
+      --font-mono: 'JetBrains Mono', "SF Mono", monospace;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-full: 9999px;
+
+      --bottom-nav-height: 72px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
       background-color: var(--bg);
       background-image: 
-        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 40%),
-        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 40%);
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 45%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.1) 0px, transparent 45%),
+        radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.03) 0px, transparent 60%);
+      background-attachment: fixed;
       color: var(--text-main);
-      font-family: 'Google Sans', 'Noto Serif SC', -apple-system, sans-serif;
+      font-family: var(--font-sans);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 24px);
     }
 
+    /* 滚动条定制 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+    /* ==========================================================================
+       2. 顶栏 (Header)
+       ========================================================================== */
     header {
-      backdrop-filter: blur(20px);
-      background: rgba(11, 15, 23, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      background: rgba(7, 9, 14, 0.75);
       border-bottom: 1px solid var(--card-border);
       position: sticky;
       top: 0;
-      z-index: 50;
+      z-index: 60;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 32px;
+      padding: 16px 28px;
     }
 
     .brand {
-      font-size: 1.15rem;
-      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px var(--primary-glow);
     }
 
     .badge-hub {
-      background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--primary-light);
       font-size: 0.72rem;
       padding: 2px 8px;
       border-radius: 6px;
@@ -73,77 +137,353 @@
       font-weight: 600;
     }
 
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-full);
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+    }
+
+    .user-status-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--emerald);
+    }
+
+    /* ==========================================================================
+       3. 核心布局容器与组件
+       ========================================================================== */
     main {
       flex: 1;
-      max-width: 1100px;
+      max-width: 1140px;
       width: 100%;
       margin: 0 auto;
-      padding: 32px 20px;
+      padding: 28px 20px 40px 20px;
+    }
+
+    .view-section {
+      display: none;
+      animation: fadeInView 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .view-section.active { display: block; }
+
+    @keyframes fadeInView {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .glass {
-      background: var(--card-bg);
+      background: var(--bg-card);
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s, box-shadow 0.25s;
     }
 
+    .glass:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .section-title-wrap {
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .section-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-sub {
+      color: var(--text-sub);
+      font-size: 0.88rem;
+      margin-top: 4px;
+    }
+
+    /* 按钮系统 */
     .btn {
-      background: linear-gradient(135deg, var(--accent), #2563eb);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
       color: #fff;
       border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
+      padding: 10px 22px;
+      border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 600;
-      transition: all 0.2s;
+      font-size: 0.92rem;
+      font-family: var(--font-sans);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 14px var(--primary-glow);
     }
-    .btn:hover { box-shadow: 0 4px 16px var(--accent-glow); transform: translateY(-1px); }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+    }
+    .btn:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+    }
+
     .btn-ghost {
       background: transparent;
       border: 1px solid var(--card-border);
       color: var(--text-sub);
       padding: 8px 16px;
-      border-radius: 10px;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: 0.2s;
+      font-size: 0.86rem;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .btn-ghost:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.2); }
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* 进度条 */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--purple));
+      border-radius: var(--radius-full);
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ==========================================================================
+       4. 文件夹大类 (Folder System)
+       ========================================================================== */
+    .folder-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .folder-box {
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      background: rgba(14, 19, 31, 0.6);
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+    .folder-box.open {
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+    .folder-header {
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.015);
+      transition: background 0.2s;
+    }
+    .folder-header:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .folder-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .folder-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .folder-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .folder-count {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .folder-chevron {
+      transition: transform 0.3s;
+      color: var(--text-muted);
+    }
+    .folder-box.open .folder-chevron {
+      transform: rotate(180deg);
+      color: var(--primary-light);
+    }
+    .folder-content {
+      padding: 0 24px 24px 24px;
+      display: none;
+    }
+    .folder-box.open .folder-content {
+      display: block;
+    }
 
     /* 课程卡片 */
-    .card-grid {
+    .cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 18px;
-      margin-top: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
     }
-    .course-item {
-      background: var(--card-bg);
+    .course-card {
+      background: var(--bg-card);
       border: 1px solid var(--card-border);
-      border-radius: 14px;
+      border-radius: var(--radius-md);
       padding: 20px;
       cursor: pointer;
-      transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
-    .course-item:hover {
+    .course-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(255,255,255,0.25);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+    }
+    .course-card-tag {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      display: inline-block;
+      align-self: flex-start;
+      margin-bottom: 12px;
+    }
+    .course-card h4 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .course-card-meta {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    /* 正文排版与丰富组件扩展 */
+    /* ==========================================================================
+       5. 研学周报与错题集专区
+       ========================================================================== */
+    .report-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+    .stat-card-label {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+    .stat-card-val {
+      font-size: 1.8rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+    }
+
+    .mistake-card {
+      background: rgba(244, 63, 94, 0.03);
+      border: 1px solid rgba(244, 63, 94, 0.15);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+    .mistake-card:hover {
+      border-color: rgba(244, 63, 94, 0.35);
+    }
+    .mistake-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--rose);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* ==========================================================================
+       6. 交互研学工作台 (Study Workspace)
+       ========================================================================== */
+    .study-pane {
+      background: var(--bg-card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      margin-top: 12px;
+    }
+    .study-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
     .content-body {
-      line-height: 1.8;
+      line-height: 1.85;
       font-size: 1.05rem;
       color: #e2e8f0;
-      margin-top: 20px;
+      margin: 24px 0;
     }
     .content-body p { margin-bottom: 16px; }
     .content-body code {
       font-family: var(--font-mono);
       background: rgba(255,255,255,0.08);
-      padding: 2px 6px;
+      padding: 3px 6px;
       border-radius: 4px;
       color: #93c5fd;
       font-size: 0.9em;
@@ -172,16 +512,15 @@
       background: rgba(255, 255, 255, 0.04);
       color: #94a3b8;
       font-weight: 600;
-      letter-spacing: 0.03em;
     }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
-    /* 几何与坐标系动态交互沙盒 */
+    /* 几何沙盒 Canvas */
     .geo-sandbox {
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(10, 15, 26, 0.9);
       border: 1px solid var(--card-border);
-      border-radius: 14px;
+      border-radius: var(--radius-md);
       padding: 20px;
       margin: 28px 0;
     }
@@ -192,12 +531,12 @@
       margin-bottom: 16px;
     }
     .geo-canvas-wrap {
-      position: relative;
       width: 100%;
       height: 380px;
-      background: #070a0f;
+      background: #05070b;
       border-radius: 10px;
       overflow: hidden;
+      position: relative;
       border: 1px solid rgba(255,255,255,0.05);
     }
     canvas { display: block; width: 100%; height: 100%; }
@@ -205,9 +544,9 @@
     .matrix-panel {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
+      gap: 14px;
       margin-top: 16px;
-      background: rgba(0,0,0,0.3);
+      background: rgba(0,0,0,0.35);
       padding: 16px;
       border-radius: 10px;
     }
@@ -221,7 +560,7 @@
     }
     .matrix-slider input[type=range] {
       flex: 1;
-      accent-color: var(--accent);
+      accent-color: var(--primary);
     }
 
     .preset-chips {
@@ -233,251 +572,1187 @@
     .chip {
       background: rgba(255,255,255,0.06);
       border: 1px solid var(--card-border);
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 6px;
       font-size: 0.78rem;
       cursor: pointer;
       transition: 0.15s;
     }
-    .chip:hover { background: rgba(59, 130, 246, 0.2); border-color: var(--accent); }
+    .chip:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--primary);
+      color: #fff;
+    }
 
-    /* 测验模块 */
+    /* 测验与答题 */
     .quiz-card {
       background: rgba(0,0,0,0.3);
       border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 20px;
+      border-radius: var(--radius-md);
+      padding: 22px;
       margin-top: 28px;
+    }
+    .quiz-question {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
     }
     .quiz-opt {
       background: rgba(255,255,255,0.03);
       border: 1px solid var(--card-border);
-      padding: 12px 16px;
-      border-radius: 10px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
       margin-top: 10px;
       cursor: pointer;
-      transition: 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .quiz-opt:hover { background: rgba(255,255,255,0.06); }
+    .quiz-opt:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateX(3px);
+    }
     .quiz-opt.selected {
-      border-color: var(--accent);
+      border-color: var(--primary);
       background: rgba(59, 130, 246, 0.18);
     }
+    .quiz-opt-marker {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .quiz-opt.selected .quiz-opt-marker {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
 
-    /* 登录弹窗 */
-    .overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
-      display: flex; align-items: center; justify-content: center; z-index: 100;
+    /* ==========================================================================
+       7. 底部导航栏 (Bottom Navigation Bar)
+       ========================================================================== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(var(--bottom-nav-height) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 55;
     }
+    .nav-item {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.8;
+      transition: transform 0.2s;
+    }
+    .nav-item:hover {
+      color: var(--text-sub);
+    }
+    .nav-item.active {
+      color: var(--primary-light);
+    }
+    .nav-item.active svg {
+      transform: translateY(-2px);
+      stroke: var(--primary-light);
+    }
+    .nav-item-badge {
+      position: absolute;
+      top: 10px;
+      right: calc(50% - 18px);
+      background: var(--rose);
+      color: #fff;
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      padding: 1px 5px;
+      border-radius: var(--radius-full);
+      line-height: 1;
+    }
+
+    /* ==========================================================================
+       8. Toast 通知与模态框系统 (取代原生 alert / confirm)
+       ========================================================================== */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 120;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 420px;
+    }
+    .toast {
+      pointer-events: auto;
+      background: rgba(18, 24, 38, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: all 0.3s;
+    }
+    .toast.out {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.95);
+    }
+    .toast-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+    }
+    .toast-info .toast-icon { color: var(--primary); }
+    .toast-success .toast-icon { color: var(--emerald); }
+    .toast-warn .toast-icon { color: var(--amber); }
+    .toast-error .toast-icon { color: var(--rose); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-16px) scale(0.92); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* 结算归档与确认 Dialog 模态层 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 110;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      animation: modalZoom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modalZoom {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* 登录弹窗表单控件 */
     .input {
-      width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--card-border);
-      border-radius: 8px; padding: 12px; color: #fff; margin-bottom: 14px; outline: none;
+      width: 100%;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 13px 16px;
+      color: #fff;
+      margin-bottom: 14px;
+      outline: none;
+      font-size: 0.95rem;
+      transition: all 0.2s;
     }
-    .input:focus { border-color: var(--accent); }
+    .input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
   </style>
 </head>
 <body>
 
+  <!-- Toast 顶层推送容器 -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- 顶栏 -->
   <header>
     <div class="brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      </div>
       <span>JR AI 研学中枢</span>
       <span class="badge-hub">PRO-VISION</span>
     </div>
-    <div>
-      <span id="userNameDisplay" style="color:var(--text-sub); font-size:0.9rem;">校验中...</span>
-      <button class="btn-ghost" id="logoutBtn" style="display:none; margin-left:12px;" onclick="logout()">登出</button>
+    <div class="header-user">
+      <div class="user-pill" id="userPill">
+        <div class="user-status-dot"></div>
+        <span id="userNameDisplay">同步中...</span>
+      </div>
     </div>
   </header>
 
-  <!-- 登录/注册浮层 -->
-  <div class="overlay" id="authModal" style="display:none;">
-    <div class="glass" style="max-width:380px; width:100%;">
-      <h3 id="authTitle" style="margin-bottom:8px;">访问会话验证</h3>
-      <p style="color:var(--text-sub); font-size:0.85rem; margin-bottom:20px;">基于安全 Session 机制建立端云同步</p>
-      <input type="text" id="username" class="input" placeholder="输入学员识别标识" />
-      <input type="password" id="password" class="input" placeholder="访问安全密钥" />
-      <button class="btn" style="width:100%;" onclick="submitAuth()">接入终端</button>
-      <div style="margin-top:14px; text-align:center;">
-        <a href="javascript:void(0)" onclick="toggleReg()" style="color:var(--accent); font-size:0.85rem; text-decoration:none;" id="regToggleText">新学员？注册账号</a>
+  <!-- 主体视图路由 -->
+  <main>
+    
+    <!-- 1. 继续学习 (严格仅显示正在进行中：未完成、进度 > 0% 且 < 100%) -->
+    <section id="view-resume" class="view-section active">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+            继续研习
+          </h2>
+          <p class="section-sub">聚焦正在进行中的研学项目，一键直达未完成章节</p>
+        </div>
+      </div>
+
+      <div id="resumeContainer">
+        <div class="glass" style="text-align:center; padding: 48px 24px;">
+          <p style="color:var(--text-sub);">正在同步学习进度...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 已学完 (归档达 100% 的成就科目) -->
+    <section id="view-completed" class="view-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            学成归档
+          </h2>
+          <p class="section-sub">已达成 100% 学习进度并结业的知识体系</p>
+        </div>
+      </div>
+
+      <div id="completedContainer">
+        <div class="glass" style="text-align:center; padding: 48px 24px;">
+          <p style="color:var(--text-sub);">暂无已结业项目，请前往学科大纲探索。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 学科大纲 (文件夹分类树) -->
+    <section id="view-courses" class="view-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            学科知识库
+          </h2>
+          <p class="section-sub">按所属模块划分的独立学术资源文件夹</p>
+        </div>
+      </div>
+
+      <div id="folderContainer" class="folder-grid">
+        <div class="glass" style="text-align:center; padding: 48px 24px;">
+          <p style="color:var(--text-sub);">正在从云端抓取课程库...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 研学周报 (Weekly Report) -->
+    <section id="view-report" class="view-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            研学周报
+          </h2>
+          <p class="section-sub">评估过去 7 天的学习轨迹与答题表现</p>
+        </div>
+        <button class="btn btn-secondary" onclick="openMistakesView()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          进入错题重练
+        </button>
+      </div>
+
+      <div class="report-stat-grid" id="reportStatGrid">
+        <div class="stat-card">
+          <div class="stat-card-label">周活跃学科</div>
+          <div class="stat-card-val" id="statActiveCourses">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">累积完成章节</div>
+          <div class="stat-card-val" id="statChaptersDone" style="color:var(--primary-light);">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">测验综合得分率</div>
+          <div class="stat-card-val" id="statAccuracy" style="color:var(--emerald);">100%</div>
+        </div>
+      </div>
+
+      <div class="glass" style="margin-top:20px;">
+        <h3 style="font-size:1.1rem; margin-bottom:14px;">本周研学记录轨迹</h3>
+        <div id="weeklyHistoryList" style="color:var(--text-sub); font-size:0.9rem;">
+          暂无历史数据。
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 错题集 (Mistakes Notebook) -->
+    <section id="view-mistakes" class="view-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            错题精练本
+          </h2>
+          <p class="section-sub">重点突破薄弱知识点，自动记录所有测验失误</p>
+        </div>
+      </div>
+
+      <div id="mistakesContainer">
+        <div class="glass" style="text-align:center; padding: 48px 24px;">
+          <p style="color:var(--text-sub);">太棒了！当前没有任何未解决的错题记录。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 用户设置 (Settings) -->
+    <section id="view-settings" class="view-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            研学终端配置
+          </h2>
+          <p class="section-sub">个人凭证与会话状态管理</p>
+        </div>
+      </div>
+
+      <div class="glass" style="max-width:600px;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+          <div style="width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg, var(--primary), var(--purple)); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.3rem;">
+            JR
+          </div>
+          <div>
+            <h3 id="settingsUsername">学员</h3>
+            <p style="font-size:0.85rem; color:var(--text-sub);">安全会话已通过 Cookie 授权持久化</p>
+          </div>
+        </div>
+
+        <hr style="border:none; border-top:1px solid var(--card-border); margin:20px 0;">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <strong>清除缓存与本地错题本</strong>
+            <p style="font-size:0.82rem; color:var(--text-sub);">清理离线索引，重新从远程同步状态</p>
+          </div>
+          <button class="btn btn-secondary" onclick="clearLocalData()">重置缓存</button>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>退出当前登录态</strong>
+            <p style="font-size:0.82rem; color:var(--text-sub);">注销服务端 Session 并销毁 Cookie</p>
+          </div>
+          <button class="btn" style="background:var(--rose); box-shadow:0 4px 14px var(--rose-glow);" onclick="logout()">安全登出</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. 动态沉浸学习工作台 (Study Pane) -->
+    <section id="view-study" class="view-section">
+      <button class="btn-ghost" onclick="exitStudy()" style="margin-bottom:16px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        返回研学大纲
+      </button>
+
+      <div class="study-pane">
+        <div class="study-header">
+          <span id="studyBelong" style="font-size:0.8rem; color:#60a5fa; background:rgba(59,130,246,0.15); padding:3px 10px; border-radius:6px;"></span>
+          <span id="chapterIndex" style="color:var(--text-sub); font-size:0.88rem; font-family:var(--font-mono);"></span>
+        </div>
+        <h1 id="studyTitle" style="font-size:1.6rem; font-weight:700; margin-top:8px;"></h1>
+
+        <div class="progress-bar-wrap" style="margin:20px 0;">
+          <div class="progress-bar-fill" id="courseProgressFill"></div>
+        </div>
+
+        <!-- 空间几何交互变换沙盒（Canvas） -->
+        <div id="interactiveSandboxArea"></div>
+
+        <!-- 正文内容（含公式与富表格） -->
+        <div id="studyContent" class="content-body"></div>
+
+        <!-- 课内随堂单测 -->
+        <div id="quizArea"></div>
+
+        <!-- 导航按钮 -->
+        <div style="margin-top:36px; display:flex; justify-content:space-between; align-items:center;">
+          <button class="btn-ghost" id="prevBtn" onclick="moveChapter(-1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            上一节
+          </button>
+          <button class="btn" id="nextBtn" onclick="moveChapter(1)">
+            完成并同步
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 底部固定导航栏 -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchTab('resume')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+      <span>继续学习</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('completed')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      <span>已学完</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('courses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      <span>知识库</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('report')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      <span>周报</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('mistakes')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+      <span class="nav-item-badge" id="mistakeBadge" style="display:none;">0</span>
+      <span>错题</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span>设置</span>
+    </button>
+  </nav>
+
+  <!-- 登录 / 注册 全屏磨砂浮层 -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div style="width:48px; height:48px; background:linear-gradient(135deg, var(--primary), var(--purple)); border-radius:12px; margin:0 auto 16px auto; display:flex; align-items:center; justify-content:center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      </div>
+      <h3 id="authTitle" style="font-size:1.3rem; margin-bottom:6px;">访问会话鉴权</h3>
+      <p style="color:var(--text-sub); font-size:0.86rem; margin-bottom:20px;">基于服务端会话建立连接，保护身份信息安全</p>
+      
+      <input type="text" id="authUsername" class="input" placeholder="输入学员代号 / 用户名" />
+      <input type="password" id="authPassword" class="input" placeholder="输入访问密钥 / 密码" />
+
+      <button class="btn" style="width:100%; margin-top:8px;" onclick="submitAuth()">验证并建立连接</button>
+      
+      <div style="margin-top:16px;">
+        <a href="javascript:void(0)" onclick="toggleAuthMode()" style="color:var(--primary-light); font-size:0.85rem; text-decoration:none;" id="authToggleLink">新学员？注册账号节点</a>
       </div>
     </div>
   </div>
 
-  <!-- 大纲门户视图 -->
-  <main id="portal">
-    <div class="glass" style="margin-bottom:24px;">
-      <h3 style="margin-bottom:12px;">📌 每日概况</h3>
-      <div id="resumeBox" style="color:var(--text-sub);">正在同步云端档案...</div>
-    </div>
+  <!-- 学成归档结业结算面板 (Milestone Modal) -->
+  <div class="modal-overlay" id="milestoneModal">
+    <div class="modal-card">
+      <div style="font-size:2.8rem; margin-bottom:8px;">🏆</div>
+      <h3 style="font-size:1.4rem; margin-bottom:8px;">学术项目研习结业！</h3>
+      <p style="color:var(--text-sub); font-size:0.88rem; margin-bottom:24px;" id="milestoneCourseName">已掌握本科目的全部核心章节</p>
 
-    <h3 style="margin-top:32px;">学科图谱</h3>
-    <div id="courseList" class="card-grid"></div>
-  </main>
-
-  <!-- 学习与交互工作台 -->
-  <main id="study" style="display:none;">
-    <button class="btn-ghost" onclick="exitStudy()" style="margin-bottom:16px;">← 返回目录</button>
-    <div class="glass">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span id="studyBelong" style="font-size:0.8rem; color:#60a5fa; background:rgba(59,130,246,0.15); padding:3px 10px; border-radius:6px;"></span>
-        <span id="chapterIndex" style="color:var(--text-sub); font-size:0.9rem; font-family:var(--font-mono);"></span>
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:var(--radius-md); padding:16px; margin-bottom:24px; display:flex; justify-content:space-around;">
+        <div>
+          <div style="font-size:0.78rem; color:var(--text-sub);">完成章节</div>
+          <div style="font-size:1.3rem; font-weight:700; color:var(--primary-light);" id="milestoneChapters">0</div>
+        </div>
+        <div>
+          <div style="font-size:0.78rem; color:var(--text-sub);">测验得分</div>
+          <div style="font-size:1.3rem; font-weight:700; color:var(--emerald);" id="milestoneScore">100%</div>
+        </div>
       </div>
-      <h2 id="studyTitle" style="margin-top:10px;"></h2>
 
-      <!-- 动态交互几何沙盒容器（若章节配置则激活） -->
-      <div id="interactiveSandboxArea"></div>
-
-      <!-- 正文内容（支持表格、KaTeX 公式） -->
-      <div id="studyContent" class="content-body"></div>
-
-      <!-- 随堂单测 -->
-      <div id="quizArea"></div>
-
-      <div style="margin-top:32px; display:flex; justify-content:space-between;">
-        <button class="btn-ghost" id="prevBtn" onclick="moveChapter(-1)">上一节</button>
-        <button class="btn" id="nextBtn" onclick="moveChapter(1)">完成本节并同步</button>
-      </div>
+      <button class="btn" style="width:100%;" onclick="closeMilestoneModal()">归档并查看成就</button>
     </div>
-  </main>
+  </div>
 
+  <!-- ==========================================================================
+       9. 核心客户端引擎脚本
+       ========================================================================== -->
   <script>
-    let isReg = false, activeCourse = null, courseData = null, chIdx = 0, curAns = null;
+    // --- 全局状态 ---
+    let currentUser = null;
+    let isRegisterMode = false;
+    let allCoursesList = [];
+    let progressSummaryData = { lastProgress: null, weeklyRecords: [], allProgressMap: {} };
+    let mistakesList = [];
+
+    // 当前研习科目上下文
+    let activeCourse = null;
+    let courseDetailData = null;
+    let currentChapterIdx = 0;
+    let selectedQuizOpt = null;
     let canvasAnimId = null;
 
-    window.onload = checkAuth;
+    // --- 初始化流程 ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadMistakesFromLocal();
+      await verifySession();
+    });
 
-    async function checkAuth() {
+    // --- Toast 消息组件系统 ---
+    function showToast(message, type = 'info', duration = 3200) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      let iconSvg = '';
+      if (type === 'success') {
+        iconSvg = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+      } else if (type === 'error') {
+        iconSvg = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+      } else if (type === 'warn') {
+        iconSvg = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+      } else {
+        iconSvg = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+      }
+
+      toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('out');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // --- 错题持久化存储 ---
+    function loadMistakesFromLocal() {
+      try {
+        const raw = localStorage.getItem('jr_mistakes_repo');
+        mistakesList = raw ? JSON.parse(raw) : [];
+        updateMistakeBadge();
+      } catch (e) { mistakesList = []; }
+    }
+
+    function saveMistakesToLocal() {
+      localStorage.setItem('jr_mistakes_repo', JSON.stringify(mistakesList));
+      updateMistakeBadge();
+    }
+
+    function recordMistake(courseName, chapterTitle, quizObj, userChoice) {
+      const exists = mistakesList.some(m => m.courseName === courseName && m.question === quizObj.question);
+      if (!exists) {
+        mistakesList.unshift({
+          courseName,
+          chapterTitle,
+          question: quizObj.question,
+          options: quizObj.options,
+          answerIndex: quizObj.answerIndex,
+          userChoice,
+          date: new Date().toLocaleDateString()
+        });
+        saveMistakesToLocal();
+      }
+    }
+
+    function removeMistake(questionText) {
+      mistakesList = mistakesList.filter(m => m.question !== questionText);
+      saveMistakesToLocal();
+      renderMistakesView();
+      showToast('恭喜！该错题已成功攻克并移出错题本', 'success');
+    }
+
+    function updateMistakeBadge() {
+      const badge = document.getElementById('mistakeBadge');
+      if (mistakesList.length > 0) {
+        badge.innerText = mistakesList.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // --- 会话鉴权 ---
+    async function verifySession() {
       try {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
-          const d = await res.json();
-          document.getElementById('userNameDisplay').innerText = '学员: ' + d.username;
-          document.getElementById('logoutBtn').style.display = 'inline-block';
-          document.getElementById('authModal').style.display = 'none';
-          initDashboard();
+          const data = await res.json();
+          currentUser = data.username;
+          document.getElementById('userNameDisplay').innerText = currentUser;
+          document.getElementById('settingsUsername').innerText = `学员: ${currentUser}`;
+          document.getElementById('authModal').classList.remove('open');
+          await syncCloudData();
         } else {
-          document.getElementById('authModal').style.display = 'flex';
+          openAuthModal();
         }
-      } catch(e) { document.getElementById('authModal').style.display = 'flex'; }
+      } catch (e) {
+        openAuthModal();
+      }
     }
 
-    function toggleReg() {
-      isReg = !isReg;
-      document.getElementById('authTitle').innerText = isReg ? '注册新学员节点' : '访问会话验证';
-      document.getElementById('regToggleText').innerText = isReg ? '已有账号？去登录' : '新学员？注册账号';
+    function openAuthModal() {
+      document.getElementById('userNameDisplay').innerText = '未接入';
+      document.getElementById('authModal').classList.add('open');
+    }
+
+    function toggleAuthMode() {
+      isRegisterMode = !isRegisterMode;
+      document.getElementById('authTitle').innerText = isRegisterMode ? '注册新学员节点' : '访问会话鉴权';
+      document.getElementById('authToggleLink').innerText = isRegisterMode ? '已有账号？登入会话' : '新学员？注册账号节点';
     }
 
     async function submitAuth() {
-      const u = document.getElementById('username').value.trim();
-      const p = document.getElementById('password').value.trim();
-      const ep = isReg ? '/api/auth/register' : '/api/auth/login';
-      const r = await fetch(ep, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username: u, password: p }) });
-      if (r.ok) location.reload();
-      else alert((await r.json()).error);
+      const u = document.getElementById('authUsername').value.trim();
+      const p = document.getElementById('authPassword').value.trim();
+      if (!u || !p) {
+        showToast('请完整输入学员代号与密码', 'warn');
+        return;
+      }
+
+      const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(isRegisterMode ? '注册并接入成功！' : '会话认证成功', 'success');
+          setTimeout(() => location.reload(), 600);
+        } else {
+          showToast(data.error || '验证失败', 'error');
+        }
+      } catch (err) {
+        showToast('网络连接异常: ' + err.message, 'error');
+      }
     }
 
     async function logout() {
       await fetch('/api/auth/logout', { method: 'POST' });
-      location.reload();
+      showToast('已安全登出', 'info');
+      setTimeout(() => location.reload(), 400);
     }
 
-    async function initDashboard() {
-      const [sumRes, curRes] = await Promise.all([fetch('/api/progress/summary'), fetch('/api/courses')]);
-      const { lastProgress } = await sumRes.json();
-      const { courses } = await curRes.json();
+    function clearLocalData() {
+      localStorage.removeItem('jr_mistakes_repo');
+      mistakesList = [];
+      updateMistakeBadge();
+      renderMistakesView();
+      showToast('本地错题与缓存已彻底重置', 'success');
+    }
 
-      document.getElementById('resumeBox').innerHTML = lastProgress
-        ? '上次学到 <strong>' + lastProgress.courseName + '</strong>（第 ' + (lastProgress.lastChapterIndex + 1) + ' 节）'
-        : '暂无进行中的科目，请在下方点击开启。';
+    // --- 云端数据同步 ---
+    async function syncCloudData() {
+      try {
+        const [sumRes, coursesRes] = await Promise.all([
+          fetch('/api/progress/summary'),
+          fetch('/api/courses')
+        ]);
 
-      const wrap = document.getElementById('courseList');
-      wrap.innerHTML = '';
-      courses.forEach(c => {
-        const d = document.createElement('div');
-        d.className = 'course-item';
-        d.innerHTML = '<span style="font-size:0.75rem; color:#60a5fa;">' + c.belongTo + '</span><h4 style="margin-top:6px;">' + c.name + '</h4>';
-        d.onclick = () => startCourse(c);
-        wrap.appendChild(d);
+        if (sumRes.ok && coursesRes.ok) {
+          progressSummaryData = await sumRes.json();
+          const { courses } = await coursesRes.json();
+          allCoursesList = courses || [];
+
+          // 渲染各模块视图
+          renderResumeTab();
+          renderCompletedTab();
+          renderFolderCoursesTab();
+          renderWeeklyReportTab();
+          renderMistakesView();
+        }
+      } catch (e) {
+        showToast('同步云端档案失败: ' + e.message, 'error');
+      }
+    }
+
+    // --- 导航路由切换 ---
+    function switchTab(tabKey) {
+      if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+
+      document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+
+      const targetSection = document.getElementById(`view-${tabKey}`);
+      if (targetSection) targetSection.classList.add('active');
+
+      // 激活对应导航栏图标
+      const navBtns = document.querySelectorAll('.nav-item');
+      const tabs = ['resume', 'completed', 'courses', 'report', 'mistakes', 'settings'];
+      const activeIdx = tabs.indexOf(tabKey);
+      if (activeIdx >= 0 && navBtns[activeIdx]) {
+        navBtns[activeIdx].classList.add('active');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openMistakesView() {
+      switchTab('mistakes');
+    }
+
+    // ==========================================================================
+    // 10. 视图渲染引擎
+    // ==========================================================================
+
+    // 1. 渲染【继续学习】（仅展示正在进行中，进度 > 0% 且 < 100%）
+    function renderResumeTab() {
+      const container = document.getElementById('resumeContainer');
+      const inProgressCourses = [];
+
+      allCoursesList.forEach(course => {
+        const record = progressSummaryData.allProgressMap[course.name];
+        if (record) {
+          // 如果总章节数已知，或者判定 completedChapters 数量
+          const completedCount = record.completedChapters ? record.completedChapters.length : 0;
+          // 只要在学习中，且非结业状态（未完全学完）
+          if (completedCount > 0 && !record.isFinished) {
+            inProgressCourses.push({ ...course, record });
+          }
+        }
       });
+
+      if (inProgressCourses.length === 0) {
+        container.innerHTML = `
+          <div class="glass" style="text-align:center; padding: 48px 24px;">
+            <p style="color:var(--text-sub); margin-bottom:14px;">当前没有处于“进行中”的科目。</p>
+            <button class="btn btn-secondary" onclick="switchTab('courses')">前往学科知识库开启研习</button>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '<div class="cards-grid">';
+      inProgressCourses.forEach(item => {
+        const rec = item.record;
+        const nextChapterDisplay = (rec.lastChapterIndex || 0) + 1;
+        html += `
+          <div class="course-card" onclick="resumeCourseDirectly('${encodeURIComponent(JSON.stringify(item))}')">
+            <div>
+              <span class="course-card-tag">${item.belongTo}</span>
+              <h4>${item.name}</h4>
+              <p style="font-size:0.86rem; color:var(--text-sub);">
+                已掌握 ${rec.completedChapters ? rec.completedChapters.length : 1} 个小节 · 定位至第 ${nextChapterDisplay} 节
+              </p>
+            </div>
+            <div class="course-card-meta">
+              <span style="color:var(--primary-light); font-weight:600;">点击继续研学 →</span>
+              <span style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);">
+                ${new Date(rec.updatedAt).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      container.innerHTML = html;
     }
 
-    async function startCourse(c) {
-      activeCourse = c;
-      const r = await fetch('/api/course-content?url=' + encodeURIComponent(c.url));
-      courseData = await r.json();
-      chIdx = 0;
-      document.getElementById('portal').style.display = 'none';
-      document.getElementById('study').style.display = 'block';
-      document.getElementById('studyTitle').innerText = c.name;
-      document.getElementById('studyBelong').innerText = c.belongTo;
-      renderCh();
+    // 2. 渲染【已学完】（结业 100%）
+    function renderCompletedTab() {
+      const container = document.getElementById('completedContainer');
+      const completedList = [];
+
+      allCoursesList.forEach(course => {
+        const record = progressSummaryData.allProgressMap[course.name];
+        if (record && record.isFinished) {
+          completedList.push({ ...course, record });
+        }
+      });
+
+      if (completedList.length === 0) {
+        container.innerHTML = `
+          <div class="glass" style="text-align:center; padding: 48px 24px;">
+            <p style="color:var(--text-sub);">尚未有结业科目。学完本科目所有章节后将在此荣誉归档！</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '<div class="cards-grid">';
+      completedList.forEach(item => {
+        html += `
+          <div class="course-card" style="border-color:rgba(16,185,129,0.25);" onclick="openCourse(item, 0)">
+            <div>
+              <span class="course-card-tag" style="background:rgba(16,185,129,0.15); color:var(--emerald);">已结业 · 100%</span>
+              <h4>${item.name}</h4>
+              <p style="font-size:0.85rem; color:var(--text-sub);">
+                所属模块：${item.belongTo}
+              </p>
+            </div>
+            <div class="course-card-meta">
+              <span style="color:var(--emerald); font-weight:600;">温故重温 →</span>
+              <span style="font-family:var(--font-mono); font-size:0.75rem;">🏆 满分通关</span>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      container.innerHTML = html;
     }
 
-    function renderCh() {
-      const ch = courseData.chapters[chIdx];
-      document.getElementById('chapterIndex').innerText = 'CHAPTER ' + (chIdx + 1) + ' / ' + courseData.chapters.length;
-      document.getElementById('studyTitle').innerText = ch.title;
+    // 3. 渲染【学科知识库】（按 BELONG_TO 划分为文件夹大类）
+    function renderFolderCoursesTab() {
+      const container = document.getElementById('folderContainer');
+      const moduleMap = {};
+
+      allCoursesList.forEach(course => {
+        if (!moduleMap[course.belongTo]) moduleMap[course.belongTo] = [];
+        moduleMap[course.belongTo].push(course);
+      });
+
+      if (Object.keys(moduleMap).length === 0) {
+        container.innerHTML = `
+          <div class="glass" style="text-align:center; padding: 48px 24px;">
+            <p style="color:var(--text-sub);">暂无解析到的学科资源，请检查远程 list.txt 索引。</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      for (const [moduleName, courses] of Object.entries(moduleMap)) {
+        html += `
+          <div class="folder-box open" id="folder-${encodeURIComponent(moduleName)}">
+            <div class="folder-header" onclick="toggleFolder('${encodeURIComponent(moduleName)}')">
+              <div class="folder-meta">
+                <div class="folder-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div>
+                  <div class="folder-title">${moduleName}</div>
+                  <div class="folder-count">共收录 ${courses.length} 个独立研学项目</div>
+                </div>
+              </div>
+              <div class="folder-chevron">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+            </div>
+            <div class="folder-content">
+              <div class="cards-grid">
+                ${courses.map(c => {
+                  const record = progressSummaryData.allProgressMap[c.name];
+                  const isDone = record && record.isFinished;
+                  const count = record && record.completedChapters ? record.completedChapters.length : 0;
+                  return `
+                    <div class="course-card" onclick="openCourse(${JSON.stringify(c).replace(/"/g, '&quot;')}, ${record ? record.lastChapterIndex : 0})">
+                      <div>
+                        <span class="course-card-tag">${c.belongTo}</span>
+                        <h4>${c.name}</h4>
+                        <p style="font-size:0.84rem; color:var(--text-sub);">
+                          ${isDone ? '🏆 已结业' : (count > 0 ? `已研习 ${count} 个章节` : '尚未启程')}
+                        </p>
+                      </div>
+                      <div class="course-card-meta">
+                        <span style="color:var(--primary-light); font-weight:600;">启动研习 →</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">${count > 0 ? '进行中' : '新课程'}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function toggleFolder(folderKey) {
+      const el = document.getElementById(`folder-${folderKey}`);
+      if (el) el.classList.toggle('open');
+    }
+
+    // 4. 渲染【研学周报】
+    function renderWeeklyReportTab() {
+      const records = progressSummaryData.weeklyRecords || [];
+      document.getElementById('statActiveCourses').innerText = records.length;
+      
+      let chaptersSum = 0;
+      let totalScoreSum = 0;
+      let quizCount = 0;
+
+      records.forEach(r => {
+        if (r.completedChapters) chaptersSum += r.completedChapters.length;
+        if (r.quizScores) {
+          r.quizScores.forEach(q => {
+            totalScoreSum += q.score;
+            quizCount++;
+          });
+        }
+      });
+
+      document.getElementById('statChaptersDone').innerText = chaptersSum;
+      const accuracy = quizCount > 0 ? Math.round(totalScoreSum / quizCount) : 100;
+      document.getElementById('statAccuracy').innerText = `${accuracy}%`;
+
+      const listEl = document.getElementById('weeklyHistoryList');
+      if (records.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-sub);">近 7 天尚无学术动态，去开启第一节研习吧！</p>';
+      } else {
+        listEl.innerHTML = `
+          <ul style="padding-left:18px; line-height:1.9;">
+            ${records.map(r => `
+              <li>
+                <strong>${r.courseName}</strong> (${r.belongTo})
+                — 已解锁 ${r.completedChapters ? r.completedChapters.length : 1} 节
+                <span style="color:var(--text-muted); font-size:0.8rem; margin-left:8px;">${new Date(r.updatedAt).toLocaleDateString()}</span>
+              </li>
+            `).join('')}
+          </ul>
+        `;
+      }
+    }
+
+    // 5. 渲染【错题集】
+    function renderMistakesView() {
+      const container = document.getElementById('mistakesContainer');
+      if (mistakesList.length === 0) {
+        container.innerHTML = `
+          <div class="glass" style="text-align:center; padding: 48px 24px;">
+            <p style="color:var(--text-sub);">太棒了！当前没有任何未解决的错题记录。</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      mistakesList.forEach((m, idx) => {
+        html += `
+          <div class="mistake-card" id="mistake-item-${idx}">
+            <div class="mistake-header">
+              <span>${m.courseName} · ${m.chapterTitle}</span>
+              <span>记录于 ${m.date}</span>
+            </div>
+            <p style="font-weight:600; font-size:1.02rem; margin-bottom:12px;">${m.question}</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              ${m.options.map((opt, oIdx) => `
+                <div class="quiz-opt" style="cursor:default; ${oIdx === m.answerIndex ? 'border-color:var(--emerald); background:rgba(16,185,129,0.1);' : (oIdx === m.userChoice ? 'border-color:var(--rose); background:rgba(244,63,94,0.1);' : '')}">
+                  <span class="quiz-opt-marker" style="${oIdx === m.answerIndex ? 'border-color:var(--emerald); background:var(--emerald); color:#fff;' : ''}">${String.fromCharCode(65 + oIdx)}</span>
+                  <span>${opt} ${oIdx === m.answerIndex ? '<strong style="color:var(--emerald); margin-left:8px;">(正确答案)</strong>' : (oIdx === m.userChoice ? '<span style="color:var(--rose); margin-left:8px;">(你的选择)</span>' : '')}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div style="margin-top:16px; text-align:right;">
+              <button class="btn btn-secondary" style="font-size:0.8rem; padding:6px 14px;" onclick="removeMistake('${m.question.replace(/'/g, "\\'")}')">已彻底攻克此题，移出本子</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    // ==========================================================================
+    // 11. 研学工作台渲染与交互逻辑
+    // ==========================================================================
+    function resumeCourseDirectly(encodedItem) {
+      const item = JSON.parse(decodeURIComponent(encodedItem));
+      const nextIdx = item.record ? item.record.lastChapterIndex : 0;
+      openCourse(item, nextIdx);
+    }
+
+    async function openCourse(course, startChapterIdx = 0) {
+      activeCourse = course;
+      currentChapterIdx = startChapterIdx;
+
+      showToast(`正在加载《${course.name}》...`, 'info', 1800);
+
+      try {
+        const res = await fetch(`/api/course-content?url=${encodeURIComponent(course.url)}`);
+        if (!res.ok) throw new Error('拉取课程 JSON 失败');
+        courseDetailData = await res.json();
+
+        // 切换到研学视窗
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('view-study').classList.add('active');
+
+        document.getElementById('studyTitle').innerText = course.name;
+        document.getElementById('studyBelong').innerText = course.belongTo;
+
+        renderChapter();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function renderChapter() {
+      if (!courseDetailData || !courseDetailData.chapters) return;
+      const ch = courseDetailData.chapters[currentChapterIdx];
+
+      document.getElementById('chapterIndex').innerText = `CHAPTER ${currentChapterIdx + 1} / ${courseDetailData.chapters.length}`;
       
       // 1. 渲染正文 HTML
-      const contentEl = document.getElementById('studyContent');
-      contentEl.innerHTML = ch.content;
+      const contentBox = document.getElementById('studyContent');
+      contentBox.innerHTML = ch.content || '<p>本小节暂无文本内容。</p>';
 
-      // 2. 触发 KaTeX 数学公式自动解析
+      // 2. 触发 KaTeX 自动排版
       if (window.renderMathInElement) {
-        renderMathInElement(contentEl, {
+        renderMathInElement(contentBox, {
           delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false}
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
           ],
           throwOnError: false
         });
       }
 
-      // 3. 构建动态交互沙盒（如果章节配置了 interactive 属性，或智能匹配线性代数类主题）
+      // 3. 计算进度条
+      const percent = Math.round(((currentChapterIdx + 1) / courseDetailData.chapters.length) * 100);
+      document.getElementById('courseProgressFill').style.width = `${percent}%`;
+
+      // 4. 挂载 2D Canvas 交互几何沙盒
       setupInteractiveSandbox(ch);
 
-      // 4. 渲染随堂测验
-      curAns = null;
-      const qBox = document.getElementById('quizArea');
-      qBox.innerHTML = '';
+      // 5. 渲染随堂测验
+      selectedQuizOpt = null;
+      const quizBox = document.getElementById('quizArea');
+      quizBox.innerHTML = '';
+
       if (ch.quiz) {
-        const wrap = document.createElement('div');
-        wrap.className = 'quiz-card';
-        wrap.innerHTML = '<strong>💡 随堂概念测验：' + ch.quiz.question + '</strong>';
-        ch.quiz.options.forEach((opt, i) => {
-          const o = document.createElement('div');
-          o.className = 'quiz-opt';
-          o.innerText = opt;
-          o.onclick = () => {
-            wrap.querySelectorAll('.quiz-opt').forEach(el => el.classList.remove('selected'));
-            o.classList.add('selected');
-            curAns = i;
+        const qCard = document.createElement('div');
+        qCard.className = 'quiz-card';
+        qCard.innerHTML = `<div class="quiz-question">💡 课内随堂测验：${ch.quiz.question}</div>`;
+
+        ch.quiz.options.forEach((opt, idx) => {
+          const row = document.createElement('div');
+          row.className = 'quiz-opt';
+          row.innerHTML = `<div class="quiz-opt-marker">${String.fromCharCode(65 + idx)}</div><span>${opt}</span>`;
+          row.onclick = () => {
+            qCard.querySelectorAll('.quiz-opt').forEach(el => el.classList.remove('selected'));
+            row.classList.add('selected');
+            selectedQuizOpt = idx;
           };
-          wrap.appendChild(o);
+          qCard.appendChild(row);
         });
-        qBox.appendChild(wrap);
+        quizBox.appendChild(qCard);
       }
-      document.getElementById('prevBtn').disabled = (chIdx === 0);
+
+      // 按钮状态
+      document.getElementById('prevBtn').disabled = (currentChapterIdx === 0);
+      const isLast = (currentChapterIdx === courseDetailData.chapters.length - 1);
+      document.getElementById('nextBtn').innerHTML = isLast ? '结业并生成总览 🏆' : '完成本节并同步 →';
     }
 
-    // ==========================================
-    // 动态几何 & 矩阵空间变换引擎 (Canvas 2D)
-    // ==========================================
+    async function moveChapter(dir) {
+      const ch = courseDetailData.chapters[currentChapterIdx];
+      let quizResult = null;
+
+      if (ch.quiz) {
+        if (selectedQuizOpt === null) {
+          showToast('请先选择测验选项后再完成本节', 'warn');
+          return;
+        }
+
+        const isCorrect = (selectedQuizOpt === ch.quiz.answerIndex);
+        quizResult = {
+          score: isCorrect ? 100 : 0,
+          total: 100
+        };
+
+        if (!isCorrect) {
+          recordMistake(activeCourse.name, ch.title, ch.quiz, selectedQuizOpt);
+          showToast('随堂测验有偏差，已自动归档至“错题集”', 'warn');
+        } else {
+          showToast('测验回答完全正确！', 'success');
+        }
+      }
+
+      const isLast = (currentChapterIdx === courseDetailData.chapters.length - 1 && dir > 0);
+
+      // 同步进度到 MongoDB 后端
+      try {
+        await fetch('/api/progress/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseName: activeCourse.name,
+            belongTo: activeCourse.belongTo,
+            courseUrl: activeCourse.url,
+            chapterIndex: currentChapterIdx,
+            quizResult: quizResult,
+            isFinished: isLast
+          })
+        });
+      } catch (e) {
+        showToast('进度同步云端受阻', 'warn');
+      }
+
+      if (isLast) {
+        // 弹出结业结算大屏
+        document.getElementById('milestoneCourseName').innerText = `已圆满完成《${activeCourse.name}》所有研学任务`;
+        document.getElementById('milestoneChapters').innerText = courseDetailData.chapters.length;
+        document.getElementById('milestoneScore').innerText = '100%';
+        document.getElementById('milestoneModal').classList.add('open');
+      } else {
+        const nextIdx = currentChapterIdx + dir;
+        if (nextIdx >= 0 && nextIdx < courseDetailData.chapters.length) {
+          currentChapterIdx = nextIdx;
+          renderChapter();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    }
+
+    function closeMilestoneModal() {
+      document.getElementById('milestoneModal').classList.remove('open');
+      exitStudy();
+      switchTab('completed');
+    }
+
+    function exitStudy() {
+      if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
+      document.getElementById('view-study').classList.remove('active');
+      syncCloudData();
+      switchTab('resume');
+    }
+
+    // ==========================================================================
+    // 12. 几何交互变换沙盒 (Canvas 2D)
+    // ==========================================================================
+    let mState = { a: 1, b: 0, c: 0, d: 1 };
+
     function setupInteractiveSandbox(ch) {
       const area = document.getElementById('interactiveSandboxArea');
       if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
       area.innerHTML = '';
 
-      // 只要配置了 interactive 或者标题包含向量/变换/矩阵，均动态挂载沙盒
-      const needsGeo = ch.interactive || /向量|变换|矩阵|空间|基/i.test(ch.title);
-      if (!needsGeo) return;
+      const needsSandbox = ch.interactive || /向量|变换|矩阵|空间|基/i.test(ch.title);
+      if (!needsSandbox) return;
 
       area.innerHTML = `
         <div class="geo-sandbox">
           <div class="geo-sandbox-header">
             <div>
               <strong style="font-size:0.95rem;">📐 空间交互变换视窗</strong>
-              <span style="font-size:0.8rem; color:var(--text-sub); margin-left:10px;">拖动滑块操纵基向量落点，观察空间变形与行列式面积</span>
+              <span style="font-size:0.8rem; color:var(--text-sub); margin-left:8px;">实时操控基向量变形，观察空间网格与行列式面积</span>
             </div>
             <div id="detIndicator" style="font-family:var(--font-mono); font-size:0.85rem; color:#38bdf8;">det(A) = 1.00</div>
           </div>
@@ -507,19 +1782,17 @@
             </div>
           </div>
           <div class="preset-chips">
-            <span class="chip" onclick="applyPreset(1,0,0,1)">恒等变换 (Identity)</span>
+            <span class="chip" onclick="applyPreset(1,0,0,1)">恒等基 (Identity)</span>
             <span class="chip" onclick="applyPreset(1,0,1,1)">水平剪切 (Shear X)</span>
-            <span class="chip" onclick="applyPreset(0.7,-0.7,0.7,0.7)">逆时针旋转 45°</span>
-            <span class="chip" onclick="applyPreset(1,1,1,1)">降维打击 (det = 0)</span>
-            <span class="chip" onclick="applyPreset(2,0,0,2)">均匀放大 2×</span>
+            <span class="chip" onclick="applyPreset(0.7,-0.7,0.7,0.7)">旋转 45°</span>
+            <span class="chip" onclick="applyPreset(1,1,1,1)">降维压扁 (det=0)</span>
+            <span class="chip" onclick="applyPreset(2,0,0,2)">膨胀 2×</span>
           </div>
         </div>
       `;
 
-      initCanvasSandbox();
+      initCanvas();
     }
-
-    let mState = { a: 1, b: 0, c: 0, d: 1 };
 
     function applyPreset(a, b, c, d) {
       mState = { a, b, c, d };
@@ -529,7 +1802,7 @@
       document.getElementById('sl_d').value = d; document.getElementById('val_d').innerText = d.toFixed(1);
     }
 
-    function initCanvasSandbox() {
+    function initCanvas() {
       const canvas = document.getElementById('geoCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
@@ -543,10 +1816,12 @@
 
       ['a','b','c','d'].forEach(key => {
         const slider = document.getElementById('sl_' + key);
-        slider.oninput = (e) => {
-          mState[key] = parseFloat(e.target.value);
-          document.getElementById('val_' + key).innerText = mState[key].toFixed(1);
-        };
+        if (slider) {
+          slider.oninput = (e) => {
+            mState[key] = parseFloat(e.target.value);
+            document.getElementById('val_' + key).innerText = mState[key].toFixed(1);
+          };
+        }
       });
 
       function draw() {
@@ -554,7 +1829,7 @@
         const h = canvas.parentElement.clientHeight;
         const cx = w / 2;
         const cy = h / 2;
-        const scale = 40; // 1 个单位 = 40 像素
+        const scale = 38;
 
         ctx.clearRect(0, 0, w, h);
 
@@ -563,49 +1838,32 @@
         const detEl = document.getElementById('detIndicator');
         if (detEl) detEl.innerText = `det(A) = ${det.toFixed(2)}`;
 
-        // 1. 绘制原始底色网格
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        // 背景网格
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
         ctx.lineWidth = 1;
         for (let x = -10; x <= 10; x++) {
-          ctx.beginPath();
-          ctx.moveTo(cx + x * scale, 0);
-          ctx.lineTo(cx + x * scale, h);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx + x * scale, 0); ctx.lineTo(cx + x * scale, h); ctx.stroke();
         }
         for (let y = -10; y <= 10; y++) {
-          ctx.beginPath();
-          ctx.moveTo(0, cy + y * scale);
-          ctx.lineTo(w, cy + y * scale);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, cy + y * scale); ctx.lineTo(w, cy + y * scale); ctx.stroke();
         }
 
-        // 2. 绘制变换后的网格（受矩阵 a,b,c,d 变形）
-        ctx.strokeStyle = 'rgba(59, 130, 246, 0.2)';
-        ctx.lineWidth = 1;
+        // 变形网格
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.18)';
         for (let i = -8; i <= 8; i++) {
-          // 常数 x 直线变换
           ctx.beginPath();
-          const startX = i * a - 8 * c;
-          const startY = i * b - 8 * d;
-          const endX = i * a + 8 * c;
-          const endY = i * b + 8 * d;
-          ctx.moveTo(cx + startX * scale, cy - startY * scale);
-          ctx.lineTo(cx + endX * scale, cy - endY * scale);
+          ctx.moveTo(cx + (i * a - 8 * c) * scale, cy - (i * b - 8 * d) * scale);
+          ctx.lineTo(cx + (i * a + 8 * c) * scale, cy - (i * b + 8 * d) * scale);
           ctx.stroke();
 
-          // 常数 y 直线变换
           ctx.beginPath();
-          const sX = -8 * a + i * c;
-          const sY = -8 * b + i * d;
-          const eX = 8 * a + i * c;
-          const eY = 8 * b + i * d;
-          ctx.moveTo(cx + sX * scale, cy - sY * scale);
-          ctx.lineTo(cx + eX * scale, cy - eY * scale);
+          ctx.moveTo(cx + (-8 * a + i * c) * scale, cy - (-8 * b + i * d) * scale);
+          ctx.lineTo(cx + (8 * a + i * c) * scale, cy - (8 * b + i * d) * scale);
           ctx.stroke();
         }
 
-        // 3. 绘制行列式面积（平行四边形）
-        ctx.fillStyle = det >= 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(244, 63, 94, 0.25)';
+        // 行列式代表的面积
+        ctx.fillStyle = det >= 0 ? 'rgba(56, 189, 248, 0.2)' : 'rgba(244, 63, 94, 0.2)';
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.lineTo(cx + a * scale, cy - b * scale);
@@ -614,86 +1872,45 @@
         ctx.closePath();
         ctx.fill();
 
-        // 4. 绘制世界坐标原点坐标轴
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        // 绝对十字坐标系
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
         ctx.moveTo(0, cy); ctx.lineTo(w, cy);
         ctx.stroke();
 
-        // 5. 绘制变换后的基向量 î (红色) 和 ĵ (绿色)
+        // 绘制变换基向量 î 与 ĵ
         drawVector(ctx, cx, cy, a * scale, -b * scale, '#f43f5e', 'î');
         drawVector(ctx, cx, cy, c * scale, -d * scale, '#10b981', 'ĵ');
 
         canvasAnimId = requestAnimationFrame(draw);
       }
 
-      function drawVector(ctx, fromX, fromY, vecX, vecY, color, label) {
-        const toX = fromX + vecX;
-        const toY = fromY + vecY;
-        const headlen = 10;
-        const angle = Math.atan2(vecY, vecX);
+      function drawVector(ctx, fx, fy, vx, vy, col, label) {
+        const tx = fx + vx;
+        const ty = fy + vy;
+        const len = 10;
+        const angle = Math.atan2(vy, vx);
 
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
+        ctx.strokeStyle = col;
+        ctx.fillStyle = col;
         ctx.lineWidth = 3;
 
-        // 箭杆
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
 
-        // 箭头
         ctx.beginPath();
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx - len * Math.cos(angle - Math.PI / 6), ty - len * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(tx - len * Math.cos(angle + Math.PI / 6), ty - len * Math.sin(angle + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
 
-        // 标签文字
-        ctx.font = 'bold 13px JetBrains Mono';
-        ctx.fillText(label, toX + 8, toY + 4);
+        ctx.font = 'bold 12px JetBrains Mono';
+        ctx.fillText(label, tx + 8, ty + 4);
       }
 
       draw();
-    }
-
-    async function moveChapter(dir) {
-      const ch = courseData.chapters[chIdx];
-      let score = null;
-      if (ch.quiz && curAns !== null) {
-        score = { score: curAns === ch.quiz.answerIndex ? 100 : 0, total: 100 };
-      }
-      await fetch('/api/progress/update', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          courseName: activeCourse.name,
-          belongTo: activeCourse.belongTo,
-          courseUrl: activeCourse.url,
-          chapterIndex: chIdx,
-          quizResult: score
-        })
-      });
-
-      const next = chIdx + dir;
-      if (next >= 0 && next < courseData.chapters.length) {
-        chIdx = next;
-        renderCh();
-      } else if (next >= courseData.chapters.length) {
-        alert('🎉 恭喜完成本科目全部章节！');
-        exitStudy();
-      }
-    }
-
-    function exitStudy() {
-      if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
-      document.getElementById('study').style.display = 'none';
-      document.getElementById('portal').style.display = 'block';
-      initDashboard();
     }
   </script>
 </body>
